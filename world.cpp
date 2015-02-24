@@ -9,7 +9,7 @@ using glm::vec2;
 using boost::polygon::voronoi_diagram;
 using std::max;
 using std::min;
-
+using std::shared_ptr;
 
 namespace boost {
 namespace polygon {
@@ -64,11 +64,11 @@ void Node::populateChildren(vec2 & lastcorner, vec2 & thiscorner, vec2 & coordin
     }
 
 
-    int area = (max(lastcorner.x, max(thiscorner.x, coordinate.x)) - min(lastcorner.x, min(thiscorner.x, coordinate.x))) *
+    float area = (max(lastcorner.x, max(thiscorner.x, coordinate.x)) - min(lastcorner.x, min(thiscorner.x, coordinate.x))) *
                     (max(lastcorner.y, max(thiscorner.y, coordinate.y)) - min(lastcorner.y, min(thiscorner.y, coordinate.y)));
 
-    int seedNumber = SEED_NUMBER * pow((recursion +1), 4);
-    seedNumber *= ((float)area / (MAPSIZE*MAPSIZE));
+    int32_t seedNumber = SEED_NUMBER * pow((recursion +1), 4);
+    seedNumber *= (area / MAPSIZE) / MAPSIZE;       // Divide like this so we don't overflow int with large MAPSIZE.
 
     for(int i = 0; i < seedNumber; ++i){
         result = (((float)rand() / RAND_MAX) * (lastcorner - coordinate)) + (((float)rand() / RAND_MAX) * (thiscorner - coordinate)) + coordinate;
@@ -282,4 +282,49 @@ std::shared_ptr<Node> FindClosest(Node* rootNode, glm::vec2 targetCoordinate, in
     }
 
     return closest;
+}
+
+void RaiseIslands(Node* rootNode){
+    cout << "RaiseIslands() " << RAND_MAX << "\t" << endl;  // rand() % MAPSIZE << "\t" << rand() % MAPSIZE << "\t" << rand() % MAPSIZE <<  endl;
+    int validMapSize = MAPSIZE * (1 - (2 * WORLD_MARGIN));
+    int mapMargin = (MAPSIZE - validMapSize) / 2;
+
+    unordered_set<Node*> islands;
+    for(int i = 0; i < ISLAND_NUMBER; ++i){
+        vec2 islandCoordinate = {(rand() % validMapSize) + mapMargin, (rand() % validMapSize) + mapMargin};
+        cout << "islandCoordinate " << islandCoordinate.x << ", " << islandCoordinate.y << endl;
+
+        shared_ptr<Node> newIsland = FindClosest(rootNode, islandCoordinate, 1);
+        _RaiseLand(newIsland.get(), &islands);
+    }
+}
+
+void _RaiseLand(Node* islandRoot, unordered_set<Node*>* p_islands){
+    if(p_islands->count(islandRoot)){
+        return;
+    }
+    if(!insideBoundary(islandRoot->coordinate)){
+        return;
+    }
+    p_islands->insert(islandRoot);
+    islandRoot->populate();
+    for(auto corner = islandRoot->_corners.begin(); corner != islandRoot->_corners.end(); ++corner){
+        for(auto parent = corner->get()->parents.begin(); parent != corner->get()->parents.end(); ++parent){
+            if(&(*parent) != (Node* const*)islandRoot){
+                if(rand() % 100 <= ISLAND_GROW){
+                    _RaiseLand(*parent, p_islands);
+                }
+            }
+        }
+    }
+}
+
+bool insideBoundary(vec2 coordinate){
+    static long int minMargin = MAPSIZE * WORLD_MARGIN;
+    static long int maxMargin = MAPSIZE - minMargin;
+    cout << minMargin << ", " << maxMargin << "\t" << coordinate.x << ", " << coordinate.y << endl;
+    if(coordinate.x < minMargin || coordinate.y < minMargin || coordinate.x > maxMargin || coordinate.y > maxMargin){
+    //    return false;
+    }
+    return true;
 }

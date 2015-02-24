@@ -14,7 +14,7 @@
 #include "world.h"
 #include "defines.h"
 
-void DrawMapNode(Node* node, SDL_Renderer* renderer);
+void DrawMapNode(Node* node, SDL_Renderer* renderer, int zoom);
 
 
 #endif  // GAMEOFTIDES_SDL_MAP_H

@@ -14,6 +14,7 @@ int main()
     std::cout << "Hello World!" << std::endl;
 
     Node rootMapNode = CreateMapRoot();
+    RaiseIslands(&rootMapNode);
 //return 0;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0){
@@ -41,6 +42,7 @@ int main()
     int mouse_x, mouse_y, closest_x, closest_y;
     bool quit = false;
     bool mouseClick;
+    int zoom = 1;
     while (!quit){
         mouseClick = false;
         while (SDL_PollEvent(&e)){
@@ -48,7 +50,37 @@ int main()
                 quit = true;
             }
             if (e.type == SDL_KEYDOWN){
-                quit = true;
+                        switch( e.key.keysym.sym )
+                        {
+                            case SDLK_EQUALS:
+                            ++zoom;
+                            cout << "zoom: " << zoom << endl;
+                            break;
+
+                            case SDLK_MINUS:
+                            --zoom;
+                            if(zoom < 1){
+                                zoom = 1;
+                            }
+                            cout << "zoom: " << zoom << endl;
+                            break;
+
+                            case SDLK_UP:
+                            break;
+
+                            case SDLK_DOWN:
+                            break;
+
+                            case SDLK_LEFT:
+                            break;
+
+                            case SDLK_RIGHT:
+                            break;
+
+                            default:
+                            quit = true;
+                            break;
+                        }
             }
             if (e.type == SDL_MOUSEBUTTONDOWN){
                 mouseClick = true;
@@ -61,9 +93,9 @@ int main()
         }
 
         // Select nearest node to mouse pointer.
-        std::shared_ptr<Node> closest = FindClosest(&rootMapNode, {mouse_x / DISPLAY_RATIO, mouse_y / DISPLAY_RATIO}, 1);
-        closest_x = closest->coordinate.x * DISPLAY_RATIO;
-        closest_y = closest->coordinate.y * DISPLAY_RATIO;
+        std::shared_ptr<Node> closest = FindClosest(&rootMapNode, {mouse_x / (DISPLAY_RATIO * zoom), mouse_y / (DISPLAY_RATIO * zoom)}, 1);
+        closest_x = closest->coordinate.x * DISPLAY_RATIO * zoom;
+        closest_y = closest->coordinate.y * DISPLAY_RATIO * zoom;
 
         if(mouseClick){
             closest->populate();
@@ -79,7 +111,7 @@ int main()
         SDL_RenderFillRect(renderer, &fillRect );
 
         // Draw map.
-        DrawMapNode(&rootMapNode, renderer);
+        DrawMapNode(&rootMapNode, renderer, zoom);
 
         // Display cursor over nearest Node.
         SDL_SetRenderDrawColor(renderer, 0x00, 0x88, 0x00, 0xFF );

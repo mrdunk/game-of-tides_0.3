@@ -81,6 +81,10 @@ struct Point {
 /* Generate first map Node. */
 Node CreateMapRoot();
 
+void RaiseIslands(Node* rootNode);
+void _RaiseLand(Node* islandRoot, std::unordered_set<Node*>* islands);
+bool insideBoundary(glm::vec2 coordinate);
+
 std::shared_ptr<Node> FindClosest(Node* rootNode, glm::vec2 targetCoordinate, int recursion);
 
 #endif  // GAMEOFTIDES_WORLD_H
