@@ -1,17 +1,20 @@
+#ifndef GAMEOFTIDES_WORLD_H
+#define GAMEOFTIDES_WORLD_H
+
 #include <iostream>
 #include <stdint.h>
 #include <vector>
 #include <unordered_set>
 #include <memory>
+#include <algorithm>    // std::min, std::max
+#include <math.h>       /* pow */
 
-#include "/usr/include/SDL2/SDL.h"
-//#include <SDL2/SDL.h>
 
 #define GLM_FORCE_RADIANS
-#include "/usr/include/glm/glm.hpp"
-#include "/usr/include/glm/gtx/vector_angle.hpp"
-//#include <glm/glm.hpp>
-//#include <glm/gtx/vector_angle.hpp>
+//#include "/usr/include/glm/glm.hpp"
+//#include "/usr/include/glm/gtx/std::vector_angle.hpp"
+#include <glm/glm.hpp>
+#include <glm/gtx/vector_angle.hpp>
 
 #include "boost/polygon/voronoi.hpp"
 
@@ -20,8 +23,6 @@
 
 #include "defines.h"
 
-
-using std::vector;
 
 /* An area of the map.
  * Reffered to a "cell" on the voronoi diagram. */
@@ -32,17 +33,17 @@ class Node {
 
         /* Parents of this Node.
          * Regular children will only have one parent but corners may have multiple. */
-        vector<Node*> parents;
+        std::unordered_set<Node*> parents;
 
         /* Corners of a Node.
          * These are reffered to as "vertexes" on a voronoi diagram and are end pooints of voronoi "edges"
          * or the meeting points of voronoi "cells".
          * 
          * These corners are used as Nodes allong with te children for the next layer down of recusion.*/
-        vector<std::shared_ptr<Node> > _corners;
+        std::vector<std::shared_ptr<Node> > _corners;
 
         /* The Nodes on the next layer of recursion down. */
-        vector<std::shared_ptr<Node> > _children;
+        std::vector<std::shared_ptr<Node> > _children;
 
         /* Corners must be inserted in order so we can travese thm in order when drawing a Node.
          * This method inerts them in clockwise rotation with straight up being the lowest posible. */
@@ -59,10 +60,6 @@ class Node {
 
         Node();
         Node(Node* parent, glm::vec2 coordinate);
-
-        int parentsNumber();
-        int childrenNumber();
-        int cornersNumber();
 
         void populate();
         void populate(bool setCorners);
@@ -84,6 +81,6 @@ struct Point {
 /* Generate first map Node. */
 Node CreateMapRoot();
 
-void DrawMapNode(Node* node, SDL_Renderer* renderer);
-
 std::shared_ptr<Node> FindClosest(Node* rootNode, glm::vec2 targetCoordinate, int recursion);
+
+#endif  // GAMEOFTIDES_WORLD_H

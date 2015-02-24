@@ -7,6 +7,8 @@ using std::cout;
 using std::endl;
 using glm::vec2;
 using boost::polygon::voronoi_diagram;
+using std::max;
+using std::min;
 
 
 namespace boost {
@@ -33,7 +35,8 @@ struct point_traits<Point> {
 
 
 Node::Node(Node* parent, vec2 _coordinate){
-    parents.push_back(parent);
+    //parents.push_back(parent);
+    parents.insert(parent);
     coordinate = _coordinate;
     cornersCalculated = false;
     recursion = parent->recursion +1;
@@ -48,21 +51,26 @@ Node::~Node(){
     std::cout << "Node::~Node()" << std::endl;
 }
 
-int Node::parentsNumber(){
-    return (int)parents.size();
-}
-
-int Node::childrenNumber(){
-    return (int)_children.size();
-}
-
-int Node::cornersNumber(){
-    return (int)_corners.size();
-}
-
 void Node::populateChildren(vec2 & lastcorner, vec2 & thiscorner, vec2 & coordinate){
     vec2 result;
-    for(int i = 0; i < SEED_NUMBER; ++i){
+
+    if(lastcorner.x < 0 || lastcorner.x > MAPSIZE || lastcorner.y < 0 || lastcorner.y > MAPSIZE ||
+            thiscorner.x < 0 || thiscorner.x > MAPSIZE || thiscorner.y < 0 || thiscorner.y > MAPSIZE ||
+            coordinate.x < 0 || coordinate.x > MAPSIZE || coordinate.y < 0 || coordinate.y > MAPSIZE){
+        cout << lastcorner.x << ", " << lastcorner.y << "\t" <<
+                thiscorner.x << ", " << thiscorner.y << "\t" <<
+                coordinate.x << ", " << coordinate.y << "\t" << endl;
+        return;
+    }
+
+
+    int area = (max(lastcorner.x, max(thiscorner.x, coordinate.x)) - min(lastcorner.x, min(thiscorner.x, coordinate.x))) *
+                    (max(lastcorner.y, max(thiscorner.y, coordinate.y)) - min(lastcorner.y, min(thiscorner.y, coordinate.y)));
+
+    int seedNumber = SEED_NUMBER * pow((recursion +1), 4);
+    seedNumber *= ((float)area / (MAPSIZE*MAPSIZE));
+
+    for(int i = 0; i < seedNumber; ++i){
         result = (((float)rand() / RAND_MAX) * (lastcorner - coordinate)) + (((float)rand() / RAND_MAX) * (thiscorner - coordinate)) + coordinate;
         if(glm::orientedAngle(glm::normalize(result - thiscorner), glm::normalize(lastcorner - thiscorner)) > 0.0f &&
                 result.x >= 0 && result.x < MAPSIZE && result.y >= 0 && result.y < MAPSIZE){
@@ -77,6 +85,10 @@ void Node::insertCorner(std::shared_ptr<Node> newCorner){
     auto corner = _corners.begin();
     for( ; corner != _corners.end(); ++corner){
         v_corner = corner->get()->coordinate - coordinate;
+        if(v_corner == v_newCorner){
+            cout << "DUPE!" << endl;
+            return;
+        }
         if(v_newCorner.x == 0 && v_corner.x == 0){
             if(v_newCorner.y < v_corner.y){
                 break;
@@ -177,30 +189,19 @@ void Node::populate(bool setCorners){
                             if(edge->is_finite()){
                                 auto newCorner = std::make_shared<Node>(workingNode.get(), vec2(edge->vertex0()->x(), edge->vertex0()->y()));
 
-                                // If this corner has been previously calculated, 
-                                // one of the other cells adgacent to this vertex will have cornersCalculated == true.
-                                bool cornerComplete = false;
                                 const voronoi_diagram<double>::edge_type *rotateEdge = edge;
                                 do {
-                                    if(points[rotateEdge->cell()->source_index()].p_node->cornersCalculated){
-                                        cornerComplete = true;
-                                        break;
-                                    }         
-                                    newCorner->parents.push_back(points[rotateEdge->cell()->source_index()].p_node.get());                               
+                                    // Set every cell adjacent to this corner as a parent of the new corner.
+                                    newCorner->parents.insert(points[rotateEdge->cell()->source_index()].p_node.get());
+
+                                    // Set the new corner as a corner of every adjacent cell.
+                                    points[rotateEdge->cell()->source_index()].p_node->insertCorner(newCorner);
                                     rotateEdge = rotateEdge->rot_next();
                                 } while (rotateEdge != edge);
-
-                                // Now add as a corner to all cells adjoining the vertex.
-                                if(!cornerComplete){
-                                    rotateEdge = edge;
-                                    do {
-                                        points[rotateEdge->cell()->source_index()].p_node->insertCorner(newCorner);
-                                    } while (rotateEdge != edge);
-                                }
                             }
                         }
                         edge = edge->next();
-                    }while(edge != cell0.incident_edge());
+                    } while(edge != cell0.incident_edge());
                 }
             }
             cornersCalculated = true;
@@ -251,47 +252,6 @@ inline int mapToScreenHeight(int y){
     return y * SCREEN_HEIGHT / MAPSIZE;
 }
 
-void DrawMapNode(Node* node, SDL_Renderer* renderer){
-    vec2 coordinate = node->coordinate * DISPLAY_RATIO;
-    int x = coordinate.x;
-    int y = coordinate.y;
-
-    if(node->recursion == 1){
-        SDL_SetRenderDrawColor(renderer, 0xFF, 0x00, 0x00, 0xFF );
-        SDL_Rect fillRect = {x -2, y -2, 4, 4};
-        SDL_RenderFillRect(renderer, &fillRect);
-        //SDL_RenderDrawPoint(renderer, x, y);
-    }
-
-    //cout << node->coordinate.x << ", " << node->coordinate.y << "\t" << x << ", " << y << endl;
-
-    vec2 cornerCoordinate, lastCorner;
-    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0xFF, 0xFF );
-    bool firstLoop = true;
-    for(auto corner = node->_corners.begin(); corner != node->_corners.end(); corner++){
-        cornerCoordinate = corner->get()->coordinate * DISPLAY_RATIO;
-        if(!firstLoop){
-            if(node->recursion){
-                //cout << firstLoop << "\t" << lastCorner.x << "," << lastCorner.y << "\t" << cornerCoordinate.x << "," << cornerCoordinate.y << endl;
-                SDL_RenderDrawLine(renderer, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y);
-            }
-        }
-        firstLoop = false;
-        lastCorner = cornerCoordinate;
-
-        DrawMapNode(corner->get(), renderer);
-    }
-    // The for() loop above doesn't close the circle. Do that now.
-    if(node->recursion && node->_corners.size()){
-        SDL_RenderDrawLine(renderer, lastCorner.x, lastCorner.y, 
-            node->_corners.front()->coordinate.x * DISPLAY_RATIO, node->_corners.front()->coordinate.y * DISPLAY_RATIO);
-    }
-
-    for(auto child = node->_children.begin(); child != node->_children.end(); child++){
-        DrawMapNode(child->get(), renderer);
-    }
-}
-
 
 std::shared_ptr<Node> FindClosest(Node* rootNode, glm::vec2 targetCoordinate, int recursion){
     std::shared_ptr<Node> closest;
@@ -320,8 +280,6 @@ std::shared_ptr<Node> FindClosest(Node* rootNode, glm::vec2 targetCoordinate, in
             closest = *corner;
         }
     }
-
-    cout << distance << "\t" << tmpDistance << endl;
 
     return closest;
 }

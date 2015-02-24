@@ -4,6 +4,7 @@
 
 #include "world.h"
 #include "defines.h"
+#include "sdl_map.h"
 
 using std::cout;
 using std::endl;
@@ -74,7 +75,7 @@ int main()
 
         //Render white filled quad
         SDL_Rect fillRect = { 0, 0, SCREEN_SIZE, SCREEN_SIZE};
-        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF );        
+        SDL_SetRenderDrawColor(renderer, 0x22, 0x88, 0xEE, 0xFF);        
         SDL_RenderFillRect(renderer, &fillRect );
 
         // Draw map.
