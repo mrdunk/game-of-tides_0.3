@@ -40,11 +40,13 @@ Node::Node(Node* parent, vec2 _coordinate){
     coordinate = _coordinate;
     cornersCalculated = false;
     recursion = parent->recursion +1;
+    height = 0;
 }
 
 Node::Node(){
     std::cout << "Node::Node()" << std::endl;
     cornersCalculated = false;
+    height = 0;
 }
 
 Node::~Node(){
@@ -86,7 +88,7 @@ void Node::insertCorner(std::shared_ptr<Node> newCorner){
     for( ; corner != _corners.end(); ++corner){
         v_corner = corner->get()->coordinate - coordinate;
         if(v_corner == v_newCorner){
-            cout << "DUPE!" << endl;
+            // Already have this corner.
             return;
         }
         if(v_newCorner.x == 0 && v_corner.x == 0){
@@ -211,6 +213,23 @@ void Node::populate(bool setCorners){
     cout << "Node::populate() -" << endl;
 }
 
+void Node::SetAboveSeaLevel(){
+    height = 1;
+    for(auto child = _children.begin(); child != _children.end(); child++){
+        child->get()->height = 1;
+    }
+
+    // Only make a corner land if all it's ajoning Nodes are land.
+    for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+        int cornerHeight = 1;
+        for(auto parent = (*corner)->parents.begin(); parent != (*corner)->parents.end(); ++parent){
+            if((*parent)->height == 0){
+                cornerHeight = 0;
+            }
+        }
+        (*corner)->height = cornerHeight;
+    }
+}
 
 Node CreateMapRoot(){
     Node rootNode;
@@ -308,6 +327,7 @@ void _RaiseLand(Node* islandRoot, unordered_set<Node*>* p_islands){
     }
     p_islands->insert(islandRoot);
     islandRoot->populate();
+    islandRoot->SetAboveSeaLevel();
     for(auto corner = islandRoot->_corners.begin(); corner != islandRoot->_corners.end(); ++corner){
         for(auto parent = corner->get()->parents.begin(); parent != corner->get()->parents.end(); ++parent){
             if(&(*parent) != (Node* const*)islandRoot){

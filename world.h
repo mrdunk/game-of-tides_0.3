@@ -58,12 +58,16 @@ class Node {
          * The root Nodes children and corners have recursion == 1. etc. */
         int recursion;
 
+        /* Height aboce sea level. */
+        int height;
+
         Node();
         Node(Node* parent, glm::vec2 coordinate);
 
         void populate();
         void populate(bool setCorners);
         void populateChildren(glm::vec2 & lastcorner, glm::vec2 & thiscorner, glm::vec2 & coordinate);
+        void SetAboveSeaLevel();
 
         ~Node();
 };

@@ -99,6 +99,7 @@ int main()
 
         if(mouseClick){
             closest->populate();
+            closest->SetAboveSeaLevel();
         }
 
         //Clear screen

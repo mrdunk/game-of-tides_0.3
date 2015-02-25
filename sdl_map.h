@@ -14,6 +14,7 @@
 #include "world.h"
 #include "defines.h"
 
+bool insideScreenBoundary(glm::vec2 coordinate);
 void DrawMapNode(Node* node, SDL_Renderer* renderer, int zoom);
 
 
