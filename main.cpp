@@ -15,6 +15,8 @@ int main()
 
     Node rootMapNode = CreateMapRoot();
     RaiseIslands(&rootMapNode);
+
+    View view;
 //return 0;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0){
@@ -30,7 +32,7 @@ int main()
     }
 
     //The window renderer
-    SDL_Renderer* renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED );
+    SDL_Renderer* renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (renderer == nullptr){
         std::cout << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
         SDL_DestroyWindow(window);
@@ -42,10 +44,9 @@ int main()
     int mouse_x, mouse_y, closest_x, closest_y;
     bool quit = false;
     bool mouseClick;
-    int zoom = 1;
     while (!quit){
         mouseClick = false;
-        while (SDL_PollEvent(&e)){
+        while (SDL_PollEvent(&e) != 0){
             if (e.type == SDL_QUIT){
                 quit = true;
             }
@@ -53,28 +54,31 @@ int main()
                         switch( e.key.keysym.sym )
                         {
                             case SDLK_EQUALS:
-                            ++zoom;
-                            cout << "zoom: " << zoom << endl;
+                            view.ZoomIn();
                             break;
 
                             case SDLK_MINUS:
-                            --zoom;
-                            if(zoom < 1){
-                                zoom = 1;
-                            }
-                            cout << "zoom: " << zoom << endl;
+                            view.ZoomOut();
                             break;
 
                             case SDLK_UP:
+                            view.PanUp();
                             break;
 
                             case SDLK_DOWN:
+                            view.PanDown();
                             break;
 
                             case SDLK_LEFT:
+                            view.PanLeft();
                             break;
 
                             case SDLK_RIGHT:
+                            view.PanRight();
+                            break;
+
+                            case SDLK_SPACE:
+                            view.ToggleWireframe();
                             break;
 
                             default:
@@ -87,15 +91,15 @@ int main()
             }
             if (e.type == SDL_MOUSEMOTION){
                 SDL_GetMouseState(&mouse_x, &mouse_y);
-                cout << "SDL_MOUSEMOTION " << mouse_x << "," << mouse_y << "\t" << 
-                    mouse_x / DISPLAY_RATIO << "," << mouse_y / DISPLAY_RATIO << "\t" << endl;
+                //cout << "SDL_MOUSEMOTION " << mouse_x << "," << mouse_y << "\t" << 
+                //    mouse_x / DISPLAY_RATIO << "," << mouse_y / DISPLAY_RATIO << "\t" << endl;
             }
         }
 
         // Select nearest node to mouse pointer.
-        std::shared_ptr<Node> closest = FindClosest(&rootMapNode, {mouse_x / (DISPLAY_RATIO * zoom), mouse_y / (DISPLAY_RATIO * zoom)}, 1);
-        closest_x = closest->coordinate.x * DISPLAY_RATIO * zoom;
-        closest_y = closest->coordinate.y * DISPLAY_RATIO * zoom;
+        std::shared_ptr<Node> closest = FindClosest(&rootMapNode, {mouse_x / (DISPLAY_RATIO * view.zoom), mouse_y / (DISPLAY_RATIO * view.zoom)}, 2);
+        closest_x = closest->coordinate.x * DISPLAY_RATIO * view.zoom;
+        closest_y = closest->coordinate.y * DISPLAY_RATIO * view.zoom;
 
         if(mouseClick){
             closest->populate();
@@ -112,7 +116,7 @@ int main()
         SDL_RenderFillRect(renderer, &fillRect );
 
         // Draw map.
-        DrawMapNode(&rootMapNode, renderer, zoom);
+        DrawMapNode(&rootMapNode, renderer, &view);
 
         // Display cursor over nearest Node.
         SDL_SetRenderDrawColor(renderer, 0x00, 0x88, 0x00, 0xFF );

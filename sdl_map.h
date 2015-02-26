@@ -14,8 +14,27 @@
 #include "world.h"
 #include "defines.h"
 
+class View {
+    public:
+        View() : zoom(1), wireframe(0){};
+        int zoom;
+        glm::vec2 offset;
+        bool wireframe;
+
+        void ZoomIn();
+        void ZoomOut();
+
+        void PanUp();
+        void PanDown();
+        void PanLeft();
+        void PanRight();
+        
+        void ToggleWireframe();
+};
+
+
 bool insideScreenBoundary(glm::vec2 coordinate);
-void DrawMapNode(Node* node, SDL_Renderer* renderer, int zoom);
+void DrawMapNode(Node* node, SDL_Renderer* renderer, View* p_view);
 
 
 #endif  // GAMEOFTIDES_SDL_MAP_H

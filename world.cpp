@@ -237,6 +237,7 @@ Node CreateMapRoot(){
     rootNode.coordinate.y = MAPSIZE / 2;
 
     rootNode.recursion = 0;
+    rootNode.height = 1;
 
     vec2 tl = {0, 0};
     auto p_tl = std::make_shared<Node>(&rootNode, tl);
@@ -272,12 +273,12 @@ inline int mapToScreenHeight(int y){
 }
 
 
-std::shared_ptr<Node> FindClosest(Node* rootNode, glm::vec2 targetCoordinate, int recursion){
+std::shared_ptr<Node> FindClosest(Node* startNode, glm::vec2 targetCoordinate, int recursion){
     std::shared_ptr<Node> closest;
     int distance = 2 * MAPSIZE;
     bool firstLoop = true;
     int tmpDistance;
-    for(auto child = rootNode->_children.begin(); child != rootNode->_children.end(); ++child){
+    for(auto child = startNode->_children.begin(); child != startNode->_children.end(); ++child){
         //cout << " child ";
         if(firstLoop){
             closest = *child;
@@ -291,7 +292,7 @@ std::shared_ptr<Node> FindClosest(Node* rootNode, glm::vec2 targetCoordinate, in
         }
         firstLoop = false;
     }
-    for(auto corner = rootNode->_corners.begin(); corner != rootNode->_corners.end(); ++corner){
+    for(auto corner = startNode->_corners.begin(); corner != startNode->_corners.end(); ++corner){
         //cout << " corner ";
         tmpDistance = glm::distance(targetCoordinate, corner->get()->coordinate);
         if(tmpDistance < distance){
@@ -300,6 +301,9 @@ std::shared_ptr<Node> FindClosest(Node* rootNode, glm::vec2 targetCoordinate, in
         }
     }
 
+    if(closest->recursion != recursion){
+        return FindClosest(closest.get(), targetCoordinate, recursion);
+    }
     return closest;
 }
 

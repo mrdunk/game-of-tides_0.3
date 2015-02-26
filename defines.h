@@ -14,6 +14,7 @@
 
 #define WORLD_MARGIN 0.2     // Area round edge of map with no land.
 
+#define PAN_STEP_SIZE 5
 
 #if SCREEN_WIDTH > SCREEN_HEIGHT
 #define SCREEN_SIZE  SCREEN_HEIGHT
