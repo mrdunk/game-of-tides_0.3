@@ -165,7 +165,7 @@ SDL_Texture* renderText(const std::string &message, const std::string &fontFile,
     // TODO Do Not open this every call. Open it once at start.
     TTF_Font *font = TTF_OpenFont(fontFile.c_str(), fontSize);
     if (font == nullptr){
-        cout << "error: TTF_OpenFont" << endl;
+        cout << "error: TTF_OpenFont " << SDL_GetError() << endl;
         return nullptr;
     }   
     //We need to first render to a surface as that's what TTF_RenderText
@@ -173,12 +173,12 @@ SDL_Texture* renderText(const std::string &message, const std::string &fontFile,
     SDL_Surface *surf = TTF_RenderText_Blended(font, message.c_str(), color);
     if (surf == nullptr){
         TTF_CloseFont(font);
-        cout << "error: TTF_RenderText" << endl;
+        cout << "error: TTF_RenderText " << SDL_GetError() << endl;
         return nullptr;
     }
     SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
     if (texture == nullptr){
-        cout << "error: CreateTexture" << endl;
+        cout << "error: CreateTexture " << SDL_GetError() << endl;
     }
     //Clean up the surface and font
     SDL_FreeSurface(surf);

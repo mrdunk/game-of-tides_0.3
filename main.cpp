@@ -32,6 +32,13 @@ int main()
         return 1;
     }
 
+    // Init Fonts.
+    if (TTF_Init() != 0){
+        std::cout << "TTF_Init: " << SDL_GetError() << std::endl;
+        SDL_Quit();
+        return 1;
+    }
+
     //The window renderer
     SDL_Renderer* renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED);
     if (renderer == nullptr){
@@ -135,7 +142,7 @@ int main()
         timerStart = timerEnd;
 
 SDL_Color color = { 255, 255, 255, 255 };
-SDL_Texture *text = renderText("TTF fonts are cool!", "lazy.ttf", color, 64, renderer);
+SDL_Texture *text = renderText("TTF fonts are cool!", "/home/duncan/Working/git/game-of-tides_0.3/lazy.ttf", color, 64, renderer);
 renderTexture(text, renderer, 100, 100);
 
         //Update screen
