@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 
 //#include <SDL2/SDL.h>
 
@@ -32,13 +33,16 @@ int main()
     }
 
     //The window renderer
-    SDL_Renderer* renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    SDL_Renderer* renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED);
     if (renderer == nullptr){
         std::cout << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
         SDL_DestroyWindow(window);
         SDL_Quit();
         return 1;
     }
+
+    //The frames per second timer
+    std::chrono::high_resolution_clock::time_point timerEnd, timerStart = std::chrono::high_resolution_clock::now();
 
     SDL_Event e;
     int mouse_x, mouse_y, closest_x, closest_y;
@@ -123,10 +127,19 @@ int main()
         SDL_Rect icon = {closest_x -4, closest_y -4, 8, 8};
         SDL_RenderFillRect(renderer, &icon);
 
+        //SDL_Delay(20);
+
+        //Calculate and correct fps
+        timerEnd = std::chrono::high_resolution_clock::now();
+        cout << std::chrono::duration<double, std::milli>(timerEnd - timerStart).count() << endl;
+        timerStart = timerEnd;
+
+SDL_Color color = { 255, 255, 255, 255 };
+SDL_Texture *text = renderText("TTF fonts are cool!", "lazy.ttf", color, 64, renderer);
+renderTexture(text, renderer, 100, 100);
+
         //Update screen
         SDL_RenderPresent(renderer);
-
-        SDL_Delay(20);
     }
 
     SDL_DestroyRenderer(renderer);

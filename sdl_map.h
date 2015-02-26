@@ -4,6 +4,8 @@
 //#include "/usr/include/SDL2/SDL.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
+#include <SDL/SDL_ttf.h>
+
 
 #define GLM_FORCE_RADIANS
 //#include "/usr/include/glm/glm.hpp"
@@ -36,5 +38,8 @@ class View {
 bool insideScreenBoundary(glm::vec2 coordinate);
 void DrawMapNode(Node* node, SDL_Renderer* renderer, View* p_view);
 
+SDL_Texture* renderText(const std::string &message, const std::string &fontFile,
+    SDL_Color color, int fontSize, SDL_Renderer *renderer);
+void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y);
 
 #endif  // GAMEOFTIDES_SDL_MAP_H
