@@ -53,7 +53,7 @@ Node::~Node(){
     std::cout << "Node::~Node()" << std::endl;
 }
 
-void Node::populateChildren(vec2 & lastcorner, vec2 & thiscorner, vec2 & coordinate){
+void Node::populateChild(vec2 & lastcorner, vec2 & thiscorner, vec2 & coordinate){
     vec2 result;
 
     if(lastcorner.x < 0 || lastcorner.x > MAPSIZE || lastcorner.y < 0 || lastcorner.y > MAPSIZE ||
@@ -127,14 +127,14 @@ void Node::populate(bool setCorners){
             thiscorner = corner->get()->coordinate;
 
             if(!first){
-                populateChildren(lastcorner, thiscorner, coordinate);
+                populateChild(lastcorner, thiscorner, coordinate);
             }
             first = false;
 
             lastcorner = thiscorner;
         }
 
-        populateChildren(_corners.back()->coordinate, _corners.front()->coordinate, coordinate);
+        populateChild(_corners.back()->coordinate, _corners.front()->coordinate, coordinate);
     }
 
     if(setCorners){
@@ -220,10 +220,17 @@ void Node::populate(bool setCorners){
 void Node::SetAboveSeaLevel(){
     height = 1;
     for(auto child = _children.begin(); child != _children.end(); child++){
-        child->get()->height = 1;
+        (*child)->height = 1;
+        for(auto childsCorner = (*child)->_corners.begin(); childsCorner != (*child)->_corners.end(); ++childsCorner){
+            for(auto childsNeghbour = (*childsCorner)->parents.begin(); childsNeghbour != (*childsCorner)->parents.end(); ++childsNeghbour){
+                if(!(*(*childsNeghbour)->parents.begin())->height){
+                    child->get()->height = 0;
+                }
+            }
+        }
     }
 
-    // Only make a corner land if all it's ajoning Nodes are land.
+    // Only make a corner land if all it's adjoning Nodes are land.
     for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
         int cornerHeight = 1;
         for(auto parent = (*corner)->parents.begin(); parent != (*corner)->parents.end(); ++parent){
@@ -316,31 +323,36 @@ void RaiseIslands(Node* rootNode){
     int validMapSize = MAPSIZE * (1 - (2 * WORLD_MARGIN));
     int mapMargin = (MAPSIZE - validMapSize) / 2;
 
-    unordered_set<Node*> islands;
+    unordered_set<Node*> islandsComplete;
     for(int i = 0; i < ISLAND_NUMBER; ++i){
         vec2 islandCoordinate = {(rand() % validMapSize) + mapMargin, (rand() % validMapSize) + mapMargin};
         cout << "islandCoordinate " << islandCoordinate.x << ", " << islandCoordinate.y << endl;
 
         shared_ptr<Node> newIsland = FindClosest(rootNode, islandCoordinate, 1);
-        _RaiseLand(newIsland.get(), &islands);
+        _RaiseLand(newIsland.get(), &islandsComplete);
+    }
+
+    for(auto island = islandsComplete.begin(); island != islandsComplete.end(); ++island){
+        (*island)->SetAboveSeaLevel();
     }
 }
 
-void _RaiseLand(Node* islandRoot, unordered_set<Node*>* p_islands){
-    if(p_islands->count(islandRoot)){
+void _RaiseLand(Node* islandRoot, unordered_set<Node*>* p_islandsComplete){
+    if(p_islandsComplete->count(islandRoot)){
         return;
     }
     if(!insideBoundary(islandRoot->coordinate)){
         return;
     }
-    p_islands->insert(islandRoot);
+    p_islandsComplete->insert(islandRoot);
     islandRoot->populate();
-    islandRoot->SetAboveSeaLevel();
+    //islandRoot->SetAboveSeaLevel();
+    islandRoot->height = 1;
     for(auto corner = islandRoot->_corners.begin(); corner != islandRoot->_corners.end(); ++corner){
         for(auto parent = corner->get()->parents.begin(); parent != corner->get()->parents.end(); ++parent){
             if(&(*parent) != (Node* const*)islandRoot){
                 if(rand() % 100 <= ISLAND_GROW){
-                    _RaiseLand(*parent, p_islands);
+                    _RaiseLand(*parent, p_islandsComplete);
                 }
             }
         }

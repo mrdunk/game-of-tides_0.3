@@ -154,7 +154,7 @@ void View::DrawMapNode(Node* node){
         }
     }
 
-    if(node->height){
+//    if(node->height){
         vec2 cornerCoordinate, lastCorner;
         bool firstLoop = true;
         int color = 0;
@@ -162,8 +162,10 @@ void View::DrawMapNode(Node* node){
             cornerCoordinate = _ApplyPanOffset(corner->get()->coordinate);
             if(!firstLoop && InsideScreenBoundary(coordinate) && InsideScreenBoundary(lastCorner) && InsideScreenBoundary(cornerCoordinate)){
                 if(node->recursion >= 2){
-                    filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
-                        0x22, 0x44 + color, 0x22, 0xFF);
+                    if(node->height){
+                        filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                0x22, 0x44 + color, 0x22, 0xFF);
+                    }
                     if(wireframe){
                         SDL_SetRenderDrawColor(rendererMap, 0xFF, 0, 0, 0);
                         SDL_RenderDrawLine(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y);
@@ -180,8 +182,10 @@ void View::DrawMapNode(Node* node){
         if(!firstLoop){
             if(node->recursion >= 2){
                 cornerCoordinate = _ApplyPanOffset(node->_corners.front()->coordinate);
-                filledTrigonRGBA(rendererMap, cornerCoordinate.x, cornerCoordinate.y,
-                        lastCorner.x, lastCorner.y, coordinate.x, coordinate.y, 0x44, 0x44 + color, 0x22, 0xFF);
+                if(node->height){
+                    filledTrigonRGBA(rendererMap, cornerCoordinate.x, cornerCoordinate.y,
+                            lastCorner.x, lastCorner.y, coordinate.x, coordinate.y, 0x44, 0x44 + color, 0x22, 0xFF);
+                }
                 if(wireframe){
                     SDL_SetRenderDrawColor(rendererMap, 0xFF, 0, 0, 0);
                     SDL_RenderDrawLine(rendererMap, cornerCoordinate.x, cornerCoordinate.y, lastCorner.x, lastCorner.y);
@@ -192,7 +196,7 @@ void View::DrawMapNode(Node* node){
         for(auto child = node->_children.begin(); child != node->_children.end(); child++){
             DrawMapNode(child->get());
         }
-    }
+//    }
 
     if(_mouseNode.get() == node){
         SDL_SetRenderDrawColor(rendererMap, 0xFF, 0xFF, 0xFF, 0xFF );

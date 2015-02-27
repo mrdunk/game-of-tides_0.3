@@ -66,7 +66,7 @@ class Node {
 
         void populate();
         void populate(bool setCorners);
-        void populateChildren(glm::vec2 & lastcorner, glm::vec2 & thiscorner, glm::vec2 & coordinate);
+        void populateChild(glm::vec2 & lastcorner, glm::vec2 & thiscorner, glm::vec2 & coordinate);
         void SetAboveSeaLevel();
 
         ~Node();

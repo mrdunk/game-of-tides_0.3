@@ -5,10 +5,10 @@
 #define SCREEN_WIDTH 1200
 #define SCREEN_HEIGHT 800
 
-#define SEED_NUMBER 200
+#define SEED_NUMBER 500
 
-#define ISLAND_NUMBER 20
-#define ISLAND_GROW  2 
+#define ISLAND_NUMBER 30
+#define ISLAND_GROW  6
 
 #define WORLD_MARGIN 0.2     // Area round edge of map with no land.
 
