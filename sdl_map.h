@@ -1,15 +1,12 @@
 #ifndef GAMEOFTIDES_SDL_MAP_H
 #define GAMEOFTIDES_SDL_MAP_H
 
-//#include "/usr/include/SDL2/SDL.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
 #include <SDL2/SDL_ttf.h>
 
 
 #define GLM_FORCE_RADIANS
-//#include "/usr/include/glm/glm.hpp"
-//#include "/usr/include/glm/gtx/vector_angle.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtx/vector_angle.hpp>
 
@@ -18,10 +15,16 @@
 
 class View {
     public:
-        View() : zoom(1), wireframe(0){};
+        View(Node* p_rootNode);
+        ~View();
+
         int zoom;
         glm::vec2 offset;
         bool wireframe;
+
+        bool mouseClick;
+        glm::vec2 mousePos;
+        bool quit;
 
         void ZoomIn();
         void ZoomOut();
@@ -32,14 +35,41 @@ class View {
         void PanRight();
         
         void ToggleWireframe();
+
+        /* Clear viewport. */
+        void Clear();
+
+        /* Read keyboard and mouse input. */
+        void ParseInput();
+
+        /* Draw the map. */
+        void DrawMapFromRoot(Node* node);
+        void DrawMapNode(Node* node);
+
+        /* Draw data to Viweport. */
+        void Render();
+
+        void DrawMapCursor();
+
+        void RenderText(const std::string &message, SDL_Color colorFG, SDL_Color colorBG, int x, int y);
+
+    private:
+        Node* _p_rootNode;
+        glm::vec2 _ApplyPanOffset(glm::vec2 viewCoordinate);
+        glm::vec2 _ReversePanOffset(glm::vec2 dataCoordinate);
+
+        bool _RegisterRenderer();
+        SDL_Window* window;
+        SDL_Renderer* rendererMap;
+        bool mapDirty;
+        
+        bool InsideScreenBoundary(glm::vec2 coordinate);
+
+        TTF_Font* _RegisterFont(const std::string &fontFile, int fontSize);
+        TTF_Font* _p_font;
+
+        std::shared_ptr<Node> _mouseNode;
 };
 
-
-bool insideScreenBoundary(glm::vec2 coordinate);
-void DrawMapNode(Node* node, SDL_Renderer* renderer, View* p_view);
-
-SDL_Texture* renderText(const std::string &message, const std::string &fontFile,
-    SDL_Color color, int fontSize, SDL_Renderer *renderer);
-void renderTexture(SDL_Texture *tex, SDL_Renderer *ren, int x, int y);
 
 #endif  // GAMEOFTIDES_SDL_MAP_H

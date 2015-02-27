@@ -35,11 +35,11 @@ struct point_traits<Point> {
 
 
 Node::Node(Node* parent, vec2 _coordinate){
-    //parents.push_back(parent);
     parents.insert(parent);
     coordinate = _coordinate;
     cornersCalculated = false;
     recursion = parent->recursion +1;
+    //height = parent->height;
     height = 0;
 }
 
@@ -69,7 +69,7 @@ void Node::populateChildren(vec2 & lastcorner, vec2 & thiscorner, vec2 & coordin
     float area = (max(lastcorner.x, max(thiscorner.x, coordinate.x)) - min(lastcorner.x, min(thiscorner.x, coordinate.x))) *
                     (max(lastcorner.y, max(thiscorner.y, coordinate.y)) - min(lastcorner.y, min(thiscorner.y, coordinate.y)));
 
-    int32_t seedNumber = SEED_NUMBER * pow((recursion +1), 4);
+    int32_t seedNumber = SEED_NUMBER * pow((recursion +1), 5);
     seedNumber *= (area / MAPSIZE) / MAPSIZE;       // Divide like this so we don't overflow int with large MAPSIZE.
 
     for(int i = 0; i < seedNumber; ++i){
@@ -77,8 +77,10 @@ void Node::populateChildren(vec2 & lastcorner, vec2 & thiscorner, vec2 & coordin
         if(glm::orientedAngle(glm::normalize(result - thiscorner), glm::normalize(lastcorner - thiscorner)) > 0.0f &&
                 result.x >= 0 && result.x < MAPSIZE && result.y >= 0 && result.y < MAPSIZE){
             _children.push_back(std::make_shared<Node>(this, result));
+            cout << ".";
         }
     }
+    cout << endl;
 }
 
 void Node::insertCorner(std::shared_ptr<Node> newCorner){
@@ -106,6 +108,7 @@ void Node::insertCorner(std::shared_ptr<Node> newCorner){
         }
     }
     _corners.insert(corner, newCorner);
+    cout << "c";
 }
 
 void Node::populate(){
@@ -200,6 +203,7 @@ void Node::populate(bool setCorners){
                                     points[rotateEdge->cell()->source_index()].p_node->insertCorner(newCorner);
                                     rotateEdge = rotateEdge->rot_next();
                                 } while (rotateEdge != edge);
+                                cout << endl;
                             }
                         }
                         edge = edge->next();
