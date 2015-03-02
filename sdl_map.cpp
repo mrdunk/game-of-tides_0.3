@@ -130,18 +130,106 @@ void View::DrawMapCursor(){
 
     if(mouseClick){
         _mouseNode.get()->populate(true);
+        _mouseNode.get()->SetAboveSeaLevel();
     }
 }
 
 void View::DrawMapNode(Node* node){
     vec2 coordinate = _ApplyPanOffset(node->coordinate);
 
-    // Not Root Node and not in display window.
-    if(node->recursion && !InsideScreenBoundary(coordinate)){
-        return;
+    if(node->height){
+        vec2 cornerCoordinate, lastCorner;
+        int color = 0;
+
+        if(node->populateProgress == NODE_COMPLETE){
+            // This Node has completed children so recurse into children.
+            for(auto child = node->_children.begin(); child != node->_children.end(); child++){
+                DrawMapNode(child->get());
+            }
+        } else if(node->populateProgress == NODE_PARTIAL){
+            // This Node is adjacent to a completed Node.
+            // We need to fill in the gaps along the border.
+            for(auto child = node->_children.begin(); child != node->_children.end(); child++){
+                if(!(*child)->_corners.empty()){
+                    bool firstLoop = true;
+                    for(auto corner = (*child)->_corners.begin(); corner != (*child)->_corners.end(); corner++){
+                        cornerCoordinate = _ApplyPanOffset(corner->get()->coordinate);
+                        if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
+                            filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                    0x22, 0x33, 0x22, 0xFF);
+                        }
+                        firstLoop = false;
+                        lastCorner = cornerCoordinate;
+                    }
+                    // Close loop.
+                    cornerCoordinate = _ApplyPanOffset((*child)->_corners.front()->coordinate);
+                    if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
+                        filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                0x44, 0x66, 0x44, 0xFF);
+                    }
+                }
+
+                // Now draw the main bit of the Node.
+                DrawMapNode(child->get());
+            }
+        }
+
+        
+        if(node->populateProgress == NODE_COMPLETE){
+            // This Node has completed children so recurse.
+            for(auto corner = node->_corners.begin(); corner != node->_corners.end(); corner++){
+                DrawMapNode(corner->get());
+            }
+        } else if(node->populateProgress == NODE_PARTIAL){
+            // This Node is adjacent to a completed Node.
+            // We need to fill in the gaps along the border.
+            for(auto corner = node->_corners.begin(); corner != node->_corners.end(); corner++){
+                if(!(*corner)->_corners.empty()){
+                    bool firstLoop = true;
+                    for(auto cornerOfCorner = (*corner)->_corners.begin(); cornerOfCorner != (*corner)->_corners.end(); cornerOfCorner++){
+                        cornerCoordinate = _ApplyPanOffset(cornerOfCorner->get()->coordinate);
+                        if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
+                            filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                    0x22, 0x33, 0x22, 0xFF);
+                        }
+                        firstLoop = false;
+                        lastCorner = cornerCoordinate;
+                    }
+                    // Close loop.
+                    cornerCoordinate = _ApplyPanOffset((*corner)->_corners.front()->coordinate);
+                    if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
+                        filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                0x44, 0x66, 0x44, 0xFF);
+                    }
+                }
+            }
+        }
+        if(node->populateProgress != NODE_COMPLETE){
+            // We need to do this for NODE_PARTIAL and NODE_UNINITIALISED.
+            // This draws the polygon in the Node for any Nodes that don't have complete data at lower levels.
+            bool firstLoop = true;
+            for(auto corner = node->_corners.begin(); corner != node->_corners.end(); corner++){
+                cornerCoordinate = _ApplyPanOffset(corner->get()->coordinate);
+                if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
+                    filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                            0x22, 0x44 + color, 0x22, 0xFF);
+                    color += 0x08;
+                }
+                firstLoop = false;
+                lastCorner = cornerCoordinate;
+            }
+            // Close loop.
+            cornerCoordinate = _ApplyPanOffset(node->_corners.front()->coordinate);
+            if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
+                filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                        0x44, 0x44 + color, 0x22, 0xFF);
+            }
+        }
     }
 
+    // Draw debug outlines of Nodes.
     if(wireframe){
+        vec2 cornerCoordinate, lastCorner;
         if(node->recursion == 1){
             SDL_SetRenderDrawColor(rendererMap, 0xFF, 0x00, 0x00, 0xFF );
             SDL_Rect fillRect = {(int)(coordinate.x -2), (int)(coordinate.y -2), 4, 4};
@@ -152,51 +240,29 @@ void View::DrawMapNode(Node* node){
             SDL_Rect fillRect = {(int)(coordinate.x -1), (int)(coordinate.y -1), 2, 2};
             SDL_RenderFillRect(rendererMap, &fillRect);
         }
-    }
 
-//    if(node->height){
-        vec2 cornerCoordinate, lastCorner;
-        bool firstLoop = true;
-        int color = 0;
-        for(auto corner = node->_corners.begin(); corner != node->_corners.end(); corner++){
-            cornerCoordinate = _ApplyPanOffset(corner->get()->coordinate);
-            if(!firstLoop && InsideScreenBoundary(coordinate) && InsideScreenBoundary(lastCorner) && InsideScreenBoundary(cornerCoordinate)){
-                if(node->recursion >= 2){
-                    if(node->height){
-                        filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
-                                0x22, 0x44 + color, 0x22, 0xFF);
-                    }
-                    if(wireframe){
-                        SDL_SetRenderDrawColor(rendererMap, 0xFF, 0, 0, 0);
-                        SDL_RenderDrawLine(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y);
-                    }
+        SDL_SetRenderDrawColor(rendererMap, 0xFF, 0x00, 0x00, 0xFF );
+        if(node->populateProgress != NODE_COMPLETE){
+            // We need to do this for NODE_PARTIAL and NODE_UNINITIALISED.
+            // This draws the polygon in the Node for any Nodes that don't have complete data at lower levels.
+            bool firstLoop = true;
+            for(auto corner = node->_corners.begin(); corner != node->_corners.end(); corner++){
+                cornerCoordinate = _ApplyPanOffset(corner->get()->coordinate);
+                if(!firstLoop && (InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
+                    SDL_RenderDrawLine(rendererMap, cornerCoordinate.x, cornerCoordinate.y, lastCorner.x, lastCorner.y);
                 }
-                color += 0x08;
+                firstLoop = false;
+                lastCorner = cornerCoordinate;
             }
-            firstLoop = false;
-            lastCorner = cornerCoordinate;
-
-            DrawMapNode(corner->get());
-        }
-        // The for() loop above doesn't close the circle. Do that now.
-        if(!firstLoop){
-            if(node->recursion >= 2){
+            // Close loop.
+            if(!node->_corners.empty()){
                 cornerCoordinate = _ApplyPanOffset(node->_corners.front()->coordinate);
-                if(node->height){
-                    filledTrigonRGBA(rendererMap, cornerCoordinate.x, cornerCoordinate.y,
-                            lastCorner.x, lastCorner.y, coordinate.x, coordinate.y, 0x44, 0x44 + color, 0x22, 0xFF);
-                }
-                if(wireframe){
-                    SDL_SetRenderDrawColor(rendererMap, 0xFF, 0, 0, 0);
+                if(!firstLoop && (InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
                     SDL_RenderDrawLine(rendererMap, cornerCoordinate.x, cornerCoordinate.y, lastCorner.x, lastCorner.y);
                 }
             }
         }
-
-        for(auto child = node->_children.begin(); child != node->_children.end(); child++){
-            DrawMapNode(child->get());
-        }
-//    }
+    }
 
     if(_mouseNode.get() == node){
         SDL_SetRenderDrawColor(rendererMap, 0xFF, 0xFF, 0xFF, 0xFF );

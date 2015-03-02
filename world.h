@@ -11,18 +11,22 @@
 
 
 #define GLM_FORCE_RADIANS
-//#include "/usr/include/glm/glm.hpp"
-//#include "/usr/include/glm/gtx/std::vector_angle.hpp"
-#include <glm/glm.hpp>
-#include <glm/gtx/vector_angle.hpp>
+#include "/usr/include/glm/glm.hpp"
+#include "/usr/include/glm/gtx/vector_angle.hpp"
+//#include <glm/glm.hpp>
+//#include <glm/gtx/vector_angle.hpp>
 
+//#include "/usr/include/boost/polygon/voronoi.hpp"
 #include "boost/polygon/voronoi.hpp"
-
 
 #include <stdlib.h>     /* srand, rand */
 
 #include "defines.h"
 
+
+#define NODE_UNINITIALISED 0
+#define NODE_PARTIAL 1
+#define NODE_COMPLETE 2
 
 /* An area of the map.
  * Reffered to a "cell" on the voronoi diagram. */
@@ -51,7 +55,7 @@ class Node {
 
         /* Track whether we have calculated the corners for this Node yet.
          * true means we have. */
-        bool cornersCalculated;
+        int populateProgress;
 
         /* How deeply recused this node is.
          * The root Node == 0.

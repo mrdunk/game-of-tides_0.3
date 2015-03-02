@@ -37,15 +37,14 @@ struct point_traits<Point> {
 Node::Node(Node* parent, vec2 _coordinate){
     parents.insert(parent);
     coordinate = _coordinate;
-    cornersCalculated = false;
+    populateProgress = NODE_UNINITIALISED;
     recursion = parent->recursion +1;
-    //height = parent->height;
     height = 0;
 }
 
 Node::Node(){
     std::cout << "Node::Node()" << std::endl;
-    cornersCalculated = false;
+    populateProgress = NODE_UNINITIALISED;
     height = 0;
 }
 
@@ -151,7 +150,7 @@ void Node::populate(bool setCorners){
         }
 
         // Calculate voronoi diagram for this node and surrounding points.
-        if(!cornersCalculated){
+        if(populateProgress != NODE_COMPLETE){
             // Get list of all points.
             vector<Point> points;
             for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
@@ -168,6 +167,9 @@ void Node::populate(bool setCorners){
                 }
                 for(auto child = (*neighbour)->_children.begin(); child != (*neighbour)->_children.end(); child++){
                     points.push_back(Point(*child, false));
+                }
+                if((*neighbour)->populateProgress == NODE_UNINITIALISED){
+                    (*neighbour)->populateProgress = NODE_PARTIAL;
                 }
             }
 
@@ -201,6 +203,7 @@ void Node::populate(bool setCorners){
 
                                     // Set the new corner as a corner of every adjacent cell.
                                     points[rotateEdge->cell()->source_index()].p_node->insertCorner(newCorner);
+
                                     rotateEdge = rotateEdge->rot_next();
                                 } while (rotateEdge != edge);
                                 cout << endl;
@@ -210,8 +213,7 @@ void Node::populate(bool setCorners){
                     } while(edge != cell0.incident_edge());
                 }
             }
-            cornersCalculated = true;
-            cout << " tock" << endl;
+            populateProgress = NODE_COMPLETE;
         }
     }
     cout << "Node::populate() -" << endl;
@@ -312,8 +314,16 @@ std::shared_ptr<Node> FindClosest(Node* startNode, glm::vec2 targetCoordinate, i
         }
     }
 
+    std::shared_ptr<Node> cadidate;
     if(closest->recursion != recursion){
-        return FindClosest(closest.get(), targetCoordinate, recursion);
+        cadidate = FindClosest(closest.get(), targetCoordinate, recursion);
+
+        vec2 cadidateDistance = cadidate->coordinate - targetCoordinate;
+        vec2 closestDistance = closest->coordinate - targetCoordinate;
+        if(cadidateDistance.x * cadidateDistance.x + cadidateDistance.y * cadidateDistance.y < 
+                closestDistance.x * closestDistance.x + closestDistance.y * closestDistance.y){
+            return cadidate;
+        }
     }
     return closest;
 }
@@ -351,7 +361,10 @@ void _RaiseLand(Node* islandRoot, unordered_set<Node*>* p_islandsComplete){
     for(auto corner = islandRoot->_corners.begin(); corner != islandRoot->_corners.end(); ++corner){
         for(auto parent = corner->get()->parents.begin(); parent != corner->get()->parents.end(); ++parent){
             if(&(*parent) != (Node* const*)islandRoot){
-                if(rand() % 100 <= ISLAND_GROW){
+                if(rand() % 100 <= ISLAND_GROW && (*parent)->coordinate.x > (MAPSIZE * WORLD_MARGIN) && 
+                        (*parent)->coordinate.y > (MAPSIZE * WORLD_MARGIN) && 
+                        (*parent)->coordinate.x < (MAPSIZE * (1 - WORLD_MARGIN)) && 
+                        (*parent)->coordinate.x < (MAPSIZE * (1 - WORLD_MARGIN))){
                     _RaiseLand(*parent, p_islandsComplete);
                 }
             }
