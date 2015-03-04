@@ -1,0 +1,2 @@
+$ ../../../../3rd_party/emsdk_portable/emscripten/master/emcc -std=c++11 -I./ ../../../../world.cpp -o world.js
+

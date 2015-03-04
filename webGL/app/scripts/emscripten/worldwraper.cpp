@@ -1,0 +1,49 @@
+#include <memory>
+#include <unordered_set>
+#include <emscripten/bind.h>
+
+#define GLM_FORCE_RADIANS
+#include "/usr/include/glm/glm.hpp"
+#include "/usr/include/glm/gtx/vector_angle.hpp"
+
+#include "/home/duncan/Working/git/game-of-tides_0.3/world.h"
+
+
+using namespace emscripten;
+
+
+EMSCRIPTEN_BINDINGS(my_module) {
+    function("CreateMapRoot", &CreateMapRoot);
+    function("RaiseIslands", &RaiseIslands, allow_raw_pointers());
+}
+
+EMSCRIPTEN_BINDINGS(stl_wrappers) {
+  emscripten::register_vector<std::shared_ptr<Node> >("VectorNode");
+}
+
+EMSCRIPTEN_BINDINGS(glm_vec2){
+  value_object<glm::vec2>("glm_vec2")
+        .field("x", &glm::vec2::x)
+        .field("y", &glm::vec2::y)
+        ;
+}
+
+EMSCRIPTEN_BINDINGS(unordered_set){
+  class_<std::unordered_set<Node*> >("unordered_set")
+    .function("size", &std::unordered_set<Node*>::size)
+    ;
+}
+
+
+EMSCRIPTEN_BINDINGS(my_example) {
+  class_<Node>("Node")
+  .smart_ptr<std::shared_ptr<Node> >("shared_ptr<Node>")
+  .property("height", &Node::height)
+  .property("coordinate", &Node::coordinate)
+  .property("parents", &Node::parents)
+  .property("_children", &Node::_children)
+  .property("_corners", &Node::_corners)
+  .property("populateProgress", &Node::populateProgress)
+  .property("recursion", &Node::recursion)
+    ;
+}

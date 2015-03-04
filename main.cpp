@@ -27,15 +27,12 @@ int main()
     // This is the viewport and code to render the map.
     View view(&rootMapNode);
 
-    SDL_Color textColorFG = { 255, 255, 255, 255 };
-    SDL_Color textColorBG = { 10, 10, 30, 255 };
-
     view.quit = false;
     while (!view.quit){
         view.ParseInput();
         view.DrawMapCursor();
         view.DrawMapFromRoot(&rootMapNode);    
-        view.RenderText("FPS: " + std::to_string(fps), textColorFG, textColorBG, 10, 10);
+        view.RenderText("FPS: " + std::to_string(fps), { 255, 255, 255, 255 }, { 10, 10, 30, 255 }, 10, 10);
         view.Render();
 
         //Calculate and correct fps

@@ -43,13 +43,13 @@ Node::Node(Node* parent, vec2 _coordinate){
 }
 
 Node::Node(){
-    std::cout << "Node::Node()" << std::endl;
+    //std::cout << "Node::Node()" << std::endl;
     populateProgress = NODE_UNINITIALISED;
     height = 0;
 }
 
 Node::~Node(){
-    std::cout << "Node::~Node()" << std::endl;
+    //std::cout << "Node::~Node()" << std::endl;
 }
 
 void Node::populateChild(vec2 & lastcorner, vec2 & thiscorner, vec2 & coordinate){
@@ -58,9 +58,9 @@ void Node::populateChild(vec2 & lastcorner, vec2 & thiscorner, vec2 & coordinate
     if(lastcorner.x < 0 || lastcorner.x > MAPSIZE || lastcorner.y < 0 || lastcorner.y > MAPSIZE ||
             thiscorner.x < 0 || thiscorner.x > MAPSIZE || thiscorner.y < 0 || thiscorner.y > MAPSIZE ||
             coordinate.x < 0 || coordinate.x > MAPSIZE || coordinate.y < 0 || coordinate.y > MAPSIZE){
-        cout << lastcorner.x << ", " << lastcorner.y << "\t" <<
-                thiscorner.x << ", " << thiscorner.y << "\t" <<
-                coordinate.x << ", " << coordinate.y << "\t" << endl;
+        //cout << lastcorner.x << ", " << lastcorner.y << "\t" <<
+        //        thiscorner.x << ", " << thiscorner.y << "\t" <<
+        //        coordinate.x << ", " << coordinate.y << "\t" << endl;
         return;
     }
 
@@ -76,10 +76,10 @@ void Node::populateChild(vec2 & lastcorner, vec2 & thiscorner, vec2 & coordinate
         if(glm::orientedAngle(glm::normalize(result - thiscorner), glm::normalize(lastcorner - thiscorner)) > 0.0f &&
                 result.x >= 0 && result.x < MAPSIZE && result.y >= 0 && result.y < MAPSIZE){
             _children.push_back(std::make_shared<Node>(this, result));
-            cout << ".";
+            //cout << ".";
         }
     }
-    cout << endl;
+    //cout << endl;
 }
 
 void Node::insertCorner(std::shared_ptr<Node> newCorner){
@@ -107,7 +107,6 @@ void Node::insertCorner(std::shared_ptr<Node> newCorner){
         }
     }
     _corners.insert(corner, newCorner);
-    cout << "c";
 }
 
 void Node::populate(){
@@ -142,7 +141,7 @@ void Node::populate(bool setCorners){
         for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
             for(auto parent = corner->get()->parents.begin(); parent != corner->get()->parents.end(); parent++){
                 if(*parent != this && neighbours.count(*parent) == 0){
-                    cout << " parent" << endl;
+                    //cout << " parent" << endl;
                     neighbours.insert(*parent);
                     (*parent)->populate(false);
                 }
@@ -184,14 +183,13 @@ void Node::populate(bool setCorners){
                     const voronoi_diagram<double>::edge_type *edge = cell0.incident_edge();
                     std::shared_ptr<Node> workingNode = points[cell0.source_index()].p_node;
 
-                    cout << "  cell " << cell0.source_index() << endl;
+                    //cout << "  cell " << cell0.source_index() << endl;
 
                     // Iterate edges around Voronoi cell.
                     do{
                         if(edge->is_primary()){
-                            const voronoi_diagram<double>::cell_type &cell1 = *edge->twin()->cell();
-
-                            cout << "    edge " << cell1.source_index() << endl;
+                            //const voronoi_diagram<double>::cell_type &cell1 = *edge->twin()->cell();
+                            //cout << "    edge " << cell1.source_index() << endl;
 
                             if(edge->is_finite()){
                                 auto newCorner = std::make_shared<Node>(workingNode.get(), vec2(edge->vertex0()->x(), edge->vertex0()->y()));
@@ -206,7 +204,7 @@ void Node::populate(bool setCorners){
 
                                     rotateEdge = rotateEdge->rot_next();
                                 } while (rotateEdge != edge);
-                                cout << endl;
+                                //cout << endl;
                             }
                         }
                         edge = edge->next();
@@ -216,7 +214,7 @@ void Node::populate(bool setCorners){
             populateProgress = NODE_COMPLETE;
         }
     }
-    cout << "Node::populate() -" << endl;
+    //cout << "Node::populate() -" << endl;
 }
 
 void Node::SetAboveSeaLevel(){

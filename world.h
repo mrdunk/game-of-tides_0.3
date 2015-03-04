@@ -49,10 +49,6 @@ class Node {
         /* The Nodes on the next layer of recursion down. */
         std::vector<std::shared_ptr<Node> > _children;
 
-        /* Corners must be inserted in order so we can travese thm in order when drawing a Node.
-         * This method inerts them in clockwise rotation with straight up being the lowest posible. */
-        void insertCorner(std::shared_ptr<Node> newCorner);
-
         /* Track whether we have calculated the corners for this Node yet.
          * true means we have. */
         int populateProgress;
@@ -68,12 +64,17 @@ class Node {
         Node();
         Node(Node* parent, glm::vec2 coordinate);
 
+        ~Node();
+
         void populate();
         void populate(bool setCorners);
-        void populateChild(glm::vec2 & lastcorner, glm::vec2 & thiscorner, glm::vec2 & coordinate);
         void SetAboveSeaLevel();
+    private:
+        /* Corners must be inserted in order so we can travese thm in order when drawing a Node.
+         * This method inerts them in clockwise rotation with straight up being the lowest posible. */
+        void insertCorner(std::shared_ptr<Node> newCorner);
 
-        ~Node();
+        void populateChild(glm::vec2 & lastcorner, glm::vec2 & thiscorner, glm::vec2 & coordinate);
 };
 
 
