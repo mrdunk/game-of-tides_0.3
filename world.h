@@ -40,7 +40,7 @@ class Node {
         std::unordered_set<Node*> parents;
 
         /* Corners of a Node.
-         * These are reffered to as "vertexes" on a voronoi diagram and are end pooints of voronoi "edges"
+         * These are reffered to as "vertexes" on a voronoi diagram and are end points of voronoi "edges"
          * or the meeting points of voronoi "cells".
          * 
          * These corners are used as Nodes allong with te children for the next layer down of recusion.*/
@@ -50,7 +50,10 @@ class Node {
         std::vector<std::shared_ptr<Node> > _children;
 
         /* Track whether we have calculated the corners for this Node yet.
-         * true means we have. */
+         * values:
+         *  NODE_UNINITIALISED: Node empty. Corners set. Children not generated.
+         *  NODE_PARTIAL: Children generated. 
+         *  NODE_COMPLETE: Children's corners generated. */
         int populateProgress;
 
         /* How deeply recused this node is.
@@ -60,6 +63,10 @@ class Node {
 
         /* Height aboce sea level. */
         int height;
+
+        /* Calculate distance to shore.
+         * Returns: distance or 0 if not a shore tile. */
+        int IsShore();
 
         Node();
         Node(Node* parent, glm::vec2 coordinate);
@@ -95,5 +102,8 @@ void _RaiseLand(Node* islandRoot, std::unordered_set<Node*>* islands);
 bool insideBoundary(glm::vec2 coordinate);
 
 std::shared_ptr<Node> FindClosest(Node* rootNode, glm::vec2 targetCoordinate, int recursion);
+
+void DistanceFromShore(Node* startNode);
+std::unordered_set<Node*> DistanceFromShore(std::unordered_set<Node*> seedset);
 
 #endif  // GAMEOFTIDES_WORLD_H

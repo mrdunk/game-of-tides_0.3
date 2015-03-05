@@ -8,7 +8,7 @@
 #define SEED_NUMBER 200
 
 #define ISLAND_NUMBER 30
-#define ISLAND_GROW  7
+#define ISLAND_GROW  10
 
 #define WORLD_MARGIN 0.15     // Area round edge of map with no land.
 

@@ -204,6 +204,7 @@ void View::DrawMapNode(Node* node){
                 }
             }
         }
+
         if(node->populateProgress != NODE_COMPLETE){
             // We need to do this for NODE_PARTIAL and NODE_UNINITIALISED.
             // This draws the polygon in the Node for any Nodes that don't have complete data at lower levels.
@@ -219,10 +220,12 @@ void View::DrawMapNode(Node* node){
                 lastCorner = cornerCoordinate;
             }
             // Close loop.
-            cornerCoordinate = _ApplyPanOffset(node->_corners.front()->coordinate);
-            if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
-                filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
-                        0x44, 0x44 + color, 0x22, 0xFF);
+            if(!firstLoop){
+                cornerCoordinate = _ApplyPanOffset(node->_corners.front()->coordinate);
+                if(InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate)){
+                    filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                            0x44, 0x44 + color, 0x22, 0xFF);
+                }
             }
         }
     }
@@ -230,15 +233,19 @@ void View::DrawMapNode(Node* node){
     // Draw debug outlines of Nodes.
     if(wireframe){
         vec2 cornerCoordinate, lastCorner;
-        if(node->recursion == 1){
-            SDL_SetRenderDrawColor(rendererMap, 0xFF, 0x00, 0x00, 0xFF );
+        if(node->recursion == 2){
+            if(node->height != 0 && node->height != MAPSIZE){
+                SDL_SetRenderDrawColor(rendererMap, 0x00, 0xFF, 0xFF, 0xFF );
+            } else {
+                SDL_SetRenderDrawColor(rendererMap, 0x88, 0x88, 0xFF, 0xFF );
+            }
             SDL_Rect fillRect = {(int)(coordinate.x -2), (int)(coordinate.y -2), 4, 4};
             SDL_RenderFillRect(rendererMap, &fillRect);
             //SDL_RenderDrawPoint(rendererMap, x, y);
-        } else if(node->recursion >= 2 && node->parents.size() > 1){
-            SDL_SetRenderDrawColor(rendererMap, 0x00, 0x44, 0x00, 0xFF );
-            SDL_Rect fillRect = {(int)(coordinate.x -1), (int)(coordinate.y -1), 2, 2};
-            SDL_RenderFillRect(rendererMap, &fillRect);
+        //} else if(node->recursion >= 2 && node->parents.size() > 1){
+        //    SDL_SetRenderDrawColor(rendererMap, 0x00, 0x44, 0x00, 0xFF );
+        //    SDL_Rect fillRect = {(int)(coordinate.x -1), (int)(coordinate.y -1), 2, 2};
+        //    SDL_RenderFillRect(rendererMap, &fillRect);
         }
 
         SDL_SetRenderDrawColor(rendererMap, 0xFF, 0x00, 0x00, 0xFF );

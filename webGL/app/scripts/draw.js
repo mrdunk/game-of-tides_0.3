@@ -36,6 +36,7 @@ window.onload = function() {
     scene.add(meshes[meshes.length -1]);
 
     var geometry = new THREE.Geometry();
+    var wireframe = new THREE.Geometry();
 
     for(var child = 0; child < rootNode._children.size(); ++child){
         if(rootNode._children.get(child).height && rootNode._children.get(child).populateProgress === 2){
@@ -44,7 +45,7 @@ window.onload = function() {
                 var newNode = createTile(childNode._children.get(grandChild));
                 if(newNode){
                     meshes.push(newNode);
-                    geometry.merge(meshes[meshes.length -1].geometry, meshes[meshes.length -1].matrix);
+                    geometry.merge(meshes[meshes.length -1], meshes[meshes.length -1].matrix);
                     //scene.add(meshes[meshes.length -1]);
                 }
             }
@@ -52,7 +53,7 @@ window.onload = function() {
                 var newNode = createTile(childNode._corners.get(grandChild));
                 if(newNode){
                     meshes.push(newNode);
-                    geometry.merge(meshes[meshes.length -1].geometry, meshes[meshes.length -1].matrix);
+                    geometry.merge(meshes[meshes.length -1], meshes[meshes.length -1].matrix);
                     //scene.add(meshes[meshes.length -1]);
                 }
             }
@@ -60,6 +61,9 @@ window.onload = function() {
     }
     var allMesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial( { color: 0x22AA33 } ) ) ;
     scene.add(allMesh);
+
+    var allWire = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial( { color: 0xFF0000, wireframe: true } ) ) ;
+    scene.add(allWire);
 
     var light2 = new THREE.HemisphereLight( 0xF0F0F0, 0x202020, 1 ); // soft white light
     scene.add( light2 );
@@ -148,7 +152,8 @@ function createTile(node){
     tile.moveTo(firstCornerCoordinate.x, firstCornerCoordinate.y);
 
     var tileGeom = new THREE.ShapeGeometry(tile);
-    var tileMesh = new THREE.Mesh(tileGeom, new THREE.MeshBasicMaterial( { color: 0x228011 + (0x100 * Math.round(0xFF * Math.random()) / 2) } ) ) ;
+    return tileGeom;
+    //var tileMesh = new THREE.Mesh(tileGeom, new THREE.MeshBasicMaterial( { color: 0x228011 + (0x100 * Math.round(0xFF * Math.random()) / 2) } ) ) ;
 
-    return tileMesh;
+    //return tileMesh;
 }

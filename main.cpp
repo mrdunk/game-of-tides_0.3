@@ -23,6 +23,9 @@ int main()
     // Generate map data.
     Node rootMapNode = CreateMapRoot();
     RaiseIslands(&rootMapNode);
+    DistanceFromShore(&rootMapNode);
+
+    //return 0;
 
     // This is the viewport and code to render the map.
     View view(&rootMapNode);

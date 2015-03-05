@@ -218,9 +218,9 @@ void Node::populate(bool setCorners){
 }
 
 void Node::SetAboveSeaLevel(){
-    height = 1;
+    height = MAPSIZE;
     for(auto child = _children.begin(); child != _children.end(); child++){
-        (*child)->height = 1;
+        (*child)->height = MAPSIZE;
         for(auto childsCorner = (*child)->_corners.begin(); childsCorner != (*child)->_corners.end(); ++childsCorner){
             for(auto childsNeghbour = (*childsCorner)->parents.begin(); childsNeghbour != (*childsCorner)->parents.end(); ++childsNeghbour){
                 if(!(*(*childsNeghbour)->parents.begin())->height){
@@ -232,7 +232,7 @@ void Node::SetAboveSeaLevel(){
 
     // Only make a corner land if all it's adjoning Nodes are land.
     for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
-        int cornerHeight = 1;
+        int cornerHeight = MAPSIZE;
         for(auto parent = (*corner)->parents.begin(); parent != (*corner)->parents.end(); ++parent){
             if((*parent)->height == 0){
                 cornerHeight = 0;
@@ -242,13 +242,56 @@ void Node::SetAboveSeaLevel(){
     }
 }
 
+int Node::IsShore(){
+    if(height == 0){
+        return 0;
+    }
+    if(populateProgress == NODE_COMPLETE){
+        // NODE_COMPLETE so corners have been fully calculated.
+        int dist, closestDist = MAPSIZE;
+        for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+            if((*corner)->height == 0){
+                // One corner is in the sea so this is shore.
+                dist = glm::distance(coordinate, (*corner)->coordinate);
+                if(dist < closestDist){
+                    closestDist = dist;
+                }
+            }
+        }
+        if(closestDist != MAPSIZE){
+            cout << "c";
+            return closestDist;
+        }
+    } else {
+        // Corners have not had height set yet.
+        int dist, closestDist = MAPSIZE;
+        for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+            for(auto parent = (*corner)->parents.begin(); parent != (*corner)->parents.end(); ++parent){
+                if((*parent)->height == 0){
+                    // An adjacent parent is in the sea.
+                    (*corner)->height = 0;
+                    dist = glm::distance(coordinate, (*corner)->coordinate);
+                    if(dist < closestDist){
+                        closestDist = dist;
+                    }
+                }
+            }
+        }
+        if(closestDist != MAPSIZE){
+            cout << "d";
+            return closestDist;
+        }
+    }
+    return 0;
+}
+
 Node CreateMapRoot(){
     Node rootNode;
     rootNode.coordinate.x = MAPSIZE / 2;
     rootNode.coordinate.y = MAPSIZE / 2;
 
     rootNode.recursion = 0;
-    rootNode.height = 1;
+    rootNode.height = MAPSIZE;
 
     vec2 tl = {0, 0};
     auto p_tl = std::make_shared<Node>(&rootNode, tl);
@@ -354,8 +397,7 @@ void _RaiseLand(Node* islandRoot, unordered_set<Node*>* p_islandsComplete){
     }
     p_islandsComplete->insert(islandRoot);
     islandRoot->populate();
-    //islandRoot->SetAboveSeaLevel();
-    islandRoot->height = 1;
+    islandRoot->height = MAPSIZE;
     for(auto corner = islandRoot->_corners.begin(); corner != islandRoot->_corners.end(); ++corner){
         for(auto parent = corner->get()->parents.begin(); parent != corner->get()->parents.end(); ++parent){
             if(&(*parent) != (Node* const*)islandRoot){
@@ -375,7 +417,45 @@ bool insideBoundary(vec2 coordinate){
     static long int maxMargin = MAPSIZE - minMargin;
     cout << minMargin << ", " << maxMargin << "\t" << coordinate.x << ", " << coordinate.y << endl;
     if(coordinate.x < minMargin || coordinate.y < minMargin || coordinate.x > maxMargin || coordinate.y > maxMargin){
-    //    return false;
+        return false;
     }
     return true;
 }
+
+void DistanceFromShore(Node* startNode){
+    unordered_set<Node*> seedset;
+    seedset.insert(startNode);
+    
+    unordered_set<Node*> shore = DistanceFromShore(seedset);
+
+    shore = DistanceFromShore(shore);
+
+    // TODO this just for fun...
+    for(auto shoreNode = shore.begin(); shoreNode != shore.end(); ++shoreNode){
+        (*shoreNode)->populate(true);
+        (*shoreNode)->SetAboveSeaLevel();
+    }
+    cout << "DistanceFromShore() -" << endl;
+}
+
+unordered_set<Node*> DistanceFromShore(unordered_set<Node*> seedset){
+    unordered_set<Node*> openset, closedset;
+
+    for(auto seedNode = seedset.begin(); seedNode != seedset.end(); ++seedNode){
+        for(auto child = (*seedNode)->_children.begin(); child != (*seedNode)->_children.end(); ++child){
+                
+            int isshore = (*child)->IsShore();
+            if(isshore == 0){
+                openset.insert(child->get());
+            } else {
+                (*child)->height = isshore;
+                closedset.insert(child->get());
+            }
+
+        }
+    }
+    cout << " ** " << openset.size() << "\t" << closedset.size() << endl;
+
+    return closedset;
+}
+
