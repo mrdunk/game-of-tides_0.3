@@ -124,13 +124,62 @@ void View::DrawMapCursor(){
     if(lastDataPos != dataPos){
         // Cursor has moved.
         mapDirty = true;
+
+        _mouseNode = FindClosest(_p_rootNode, dataPos, 3);
+        lastDataPos = dataPos;
+       
+        cout << "recursion: " << _mouseNode.get()->recursion << "\t" << "tilesFromSea: " << _mouseNode.get()->tilesFromSea << "\t" << "parents:" << _mouseNode.get()->parents.size()  << "\t" << endl;
+
     }
-    lastDataPos = dataPos;
-    _mouseNode = FindClosest(_p_rootNode, dataPos, 2);
 
     if(mouseClick){
-        _mouseNode.get()->populate(true);
+        _mouseNode.get()->populate();
         _mouseNode.get()->SetAboveSeaLevel();
+    }
+
+    if(_mouseNode.get()){
+        SDL_SetRenderDrawColor(rendererMap, 0xFF, 0xFF, 0xFF, 0xFF );
+        vec2 coordinate = _ApplyPanOffset(_mouseNode.get()->coordinate);
+        bool firstLoop = true;
+        vec2 firstPoint, lastPoint, thisPoint;
+        for(auto corner = _mouseNode.get()->_corners.begin(); corner != _mouseNode.get()->_corners.end(); ++corner){
+            thisPoint = _ApplyPanOffset((*corner)->coordinate);
+            if(!firstLoop){
+                SDL_RenderDrawLine(rendererMap, lastPoint.x, lastPoint.y, thisPoint.x, thisPoint.y);
+            } else {
+                firstPoint = thisPoint;
+            }
+            firstLoop = false;
+            lastPoint = thisPoint;
+
+            for(auto neighbour = (*corner)->parents.begin(); neighbour != (*corner)->parents.end(); ++neighbour){
+                if(*neighbour != _mouseNode.get()){
+                    vec2 neighbourCoordinate = _ApplyPanOffset((*neighbour)->coordinate);
+                    SDL_RenderDrawLine(rendererMap, coordinate.x, coordinate.y, neighbourCoordinate.x, neighbourCoordinate.y);
+                }
+            }
+        }
+        if(!firstLoop){
+            SDL_RenderDrawLine(rendererMap, lastPoint.x, lastPoint.y, firstPoint.x, firstPoint.y);
+        }
+
+        SDL_SetRenderDrawColor(rendererMap, 0xAA, 0x88, 0x88, 0xFF );
+        for(auto parent = _mouseNode.get()->parents.begin(); parent != _mouseNode.get()->parents.end(); ++parent){
+            firstLoop = true;
+            for(auto corner = (*parent)->_corners.begin(); corner != (*parent)->_corners.end(); ++corner){
+                thisPoint = _ApplyPanOffset((*corner)->coordinate);
+                if(!firstLoop){
+                    SDL_RenderDrawLine(rendererMap, lastPoint.x, lastPoint.y, thisPoint.x, thisPoint.y);
+                } else {
+                    firstPoint = thisPoint;
+                }
+                firstLoop = false;
+                lastPoint = thisPoint;
+            }
+            if(!firstLoop){
+                SDL_RenderDrawLine(rendererMap, lastPoint.x, lastPoint.y, firstPoint.x, firstPoint.y);
+            }
+        }
     }
 }
 
@@ -138,7 +187,7 @@ void View::DrawMapNode(Node* node){
     vec2 coordinate = _ApplyPanOffset(node->coordinate);
 
     if(node->height){
-        vec2 cornerCoordinate, lastCorner;
+        vec2 cornerCoordinate, firstCorner, lastCorner;
         int color = 0;
 
         if(node->populateProgress == NODE_COMPLETE){
@@ -157,14 +206,15 @@ void View::DrawMapNode(Node* node){
                         if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
                             filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
                                     0x22, 0x33, 0x22, 0xFF);
+                        } else if(firstLoop){
+                            firstCorner = cornerCoordinate;
+                            firstLoop = false;
                         }
-                        firstLoop = false;
                         lastCorner = cornerCoordinate;
                     }
                     // Close loop.
-                    cornerCoordinate = _ApplyPanOffset((*child)->_corners.front()->coordinate);
                     if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
-                        filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                        filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, firstCorner.x, firstCorner.y, coordinate.x, coordinate.y,
                                 0x44, 0x66, 0x44, 0xFF);
                     }
                 }
@@ -180,29 +230,6 @@ void View::DrawMapNode(Node* node){
             for(auto corner = node->_corners.begin(); corner != node->_corners.end(); corner++){
                 DrawMapNode(corner->get());
             }
-        } else if(node->populateProgress == NODE_PARTIAL){
-            // This Node is adjacent to a completed Node.
-            // We need to fill in the gaps along the border.
-            for(auto corner = node->_corners.begin(); corner != node->_corners.end(); corner++){
-                if(!(*corner)->_corners.empty()){
-                    bool firstLoop = true;
-                    for(auto cornerOfCorner = (*corner)->_corners.begin(); cornerOfCorner != (*corner)->_corners.end(); cornerOfCorner++){
-                        cornerCoordinate = _ApplyPanOffset(cornerOfCorner->get()->coordinate);
-                        if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
-                            filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
-                                    0x22, 0x33, 0x22, 0xFF);
-                        }
-                        firstLoop = false;
-                        lastCorner = cornerCoordinate;
-                    }
-                    // Close loop.
-                    cornerCoordinate = _ApplyPanOffset((*corner)->_corners.front()->coordinate);
-                    if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
-                        filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
-                                0x44, 0x66, 0x44, 0xFF);
-                    }
-                }
-            }
         }
 
         if(node->populateProgress != NODE_COMPLETE){
@@ -212,9 +239,14 @@ void View::DrawMapNode(Node* node){
             for(auto corner = node->_corners.begin(); corner != node->_corners.end(); corner++){
                 cornerCoordinate = _ApplyPanOffset(corner->get()->coordinate);
                 if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
-                    filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
-                            0x22, 0x44 + color, 0x22, 0xFF);
-                    color += 0x08;
+                    if(node->height <= 0){
+                        filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                0x22, 0x44 + color, 0x22, 0xFF);
+                        color += 0x08;
+                    } else {
+                        filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                0x00, node->height / 2000, 0x00, 0xFF);
+                    }
                 }
                 firstLoop = false;
                 lastCorner = cornerCoordinate;
@@ -223,8 +255,13 @@ void View::DrawMapNode(Node* node){
             if(!firstLoop){
                 cornerCoordinate = _ApplyPanOffset(node->_corners.front()->coordinate);
                 if(InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate)){
-                    filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
-                            0x44, 0x44 + color, 0x22, 0xFF);
+                    if(node->height <= 0){
+                        filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                0x44, 0x44 + color, 0x22, 0xFF);
+                    } else {
+                        filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                0x00, node->height / 2000, 0x00, 0xFF);
+                    }
                 }
             }
         }
@@ -271,7 +308,7 @@ void View::DrawMapNode(Node* node){
         }
     }
 
-    if(_mouseNode.get() == node){
+    if(_mouseNode && _mouseNode.get() == node){
         SDL_SetRenderDrawColor(rendererMap, 0xFF, 0xFF, 0xFF, 0xFF );
         SDL_Rect fillRect = {(int)(coordinate.x -1), (int)(coordinate.y -1), 2, 2};
         SDL_RenderFillRect(rendererMap, &fillRect);

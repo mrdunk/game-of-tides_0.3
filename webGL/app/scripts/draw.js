@@ -7,11 +7,7 @@ var viewPos = [MAPSIZE / 2, MAPSIZE / 2, MAPSIZE / 2];
 window.onload = function() {
     var rootNode = Module.CreateMapRoot();
     Module.RaiseIslands(rootNode);
-    console.log(rootNode);
-    console.log(rootNode.parents);
-    console.log(rootNode.parents.size());
-    console.log(rootNode._children);
-    console.log(rootNode._children.size());
+    Module.DistanceFromShore(rootNode);
 
     renderer = new THREE.WebGLRenderer();
     renderer.setSize( 800, 600 );
@@ -22,12 +18,12 @@ window.onload = function() {
     var camera = new THREE.PerspectiveCamera(
             90,             // Field of view
             800 / 600,      // Aspect ratio
-            0.1,            // Near plane
+            100,            // Near plane
             //1000,
             //10000           // Far plane
-            MAPSIZE
+            MAPSIZE         // Far plane
             );
-    camera.position.set( MAPSIZE/2, MAPSIZE/2, MAPSIZE/2 );
+    camera.position.set( MAPSIZE/2, 0, MAPSIZE/2 );
     var centreStage = new THREE.Vector3(MAPSIZE/2, MAPSIZE/2, 0);
     camera.lookAt( centreStage );
 
@@ -59,14 +55,18 @@ window.onload = function() {
             }
         }
     }
-    var allMesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial( { color: 0x22AA33 } ) ) ;
+    var allMesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial( { color: 0x22AA33 } ) ) ;
     scene.add(allMesh);
 
-    var allWire = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial( { color: 0xFF0000, wireframe: true } ) ) ;
-    scene.add(allWire);
+    //var allWire = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial( { color: 0xFF0000, wireframe: true } ) ) ;
+    //scene.add(allWire);
 
-    var light2 = new THREE.HemisphereLight( 0xF0F0F0, 0x202020, 1 ); // soft white light
-    scene.add( light2 );
+//    var light2 = new THREE.HemisphereLight( 0xF0F0F0, 0x202020, 1 ); // soft white light
+//    scene.add( light2 );
+
+    var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+    directionalLight.position.set( 0, 0, MAPSIZE );
+    scene.add( directionalLight );
 
     render(meshes, scene, camera);
 
@@ -123,7 +123,7 @@ function render(meshes, scene, camera){
 }
 
 function createBackground(){
-    var tile = new THREE.Shape();
+    /*var tile = new THREE.Shape();
     tile.moveTo(1, 1);
     tile.moveTo(MAPSIZE -1, 1);
     tile.moveTo(MAPSIZE -1, MAPSIZE -1);
@@ -132,6 +132,14 @@ function createBackground(){
 
     var tileGeom = new THREE.ShapeGeometry(tile);
     var tileMesh = new THREE.Mesh(tileGeom, new THREE.MeshBasicMaterial( { color: 0x2233AA } ) ) ;
+    
+    return tileMesh;*/
+
+    var tileGeom = new THREE.PlaneGeometry(MAPSIZE, MAPSIZE);
+    var tileMesh = new THREE.Mesh(tileGeom, new THREE.MeshBasicMaterial( { color: 0x2233AA } ) ) ;
+    tileMesh.position.y = MAPSIZE /2;
+    tileMesh.position.x = MAPSIZE /2;
+    tileMesh.position.z = -1;
 
     return tileMesh;
 }
@@ -140,20 +148,25 @@ function createTile(node){
     if(node._corners.size() < 3 || node.height <= 0){
         return;
     }
-    var firstCornerCoordinate = null;
-    var tile = new THREE.Shape();
+    var tileGeometry = new THREE.Geometry();
+    tileGeometry.vertices.push( new THREE.Vector3(node.coordinate.x, node.coordinate.y, node.height / 4) );
     for(var cornerIndex = 0; cornerIndex < node._corners.size(); ++cornerIndex){
+        var height = 0;
         var corner = node._corners.get(cornerIndex);
-        if(!firstCornerCoordinate){
-            firstCornerCoordinate = corner.coordinate;
+        for(var neighbourIndex = 0; neighbourIndex < corner.parents.size(); ++neighbourIndex){
+            var neighbour = Module.unordered_set_get(corner.parents, neighbourIndex);
+            height += neighbour.height;
         }
-        tile.moveTo(corner.coordinate.x, corner.coordinate.y);
+        height /= corner.parents.size();
+        tileGeometry.vertices.push( new THREE.Vector3(corner.coordinate.x, corner.coordinate.y, height / 4) );
+        //tileGeometry.vertices.push( new THREE.Vector3(corner.coordinate.x, corner.coordinate.y, corner.height / 10) );
+        if(tileGeometry.vertices.length > 2){
+            tileGeometry.faces.push( new THREE.Face3( 0, tileGeometry.vertices.length -2, tileGeometry.vertices.length -1) );
+        }
     }
-    tile.moveTo(firstCornerCoordinate.x, firstCornerCoordinate.y);
+    tileGeometry.faces.push( new THREE.Face3( 0, tileGeometry.vertices.length -1, 1) );
 
-    var tileGeom = new THREE.ShapeGeometry(tile);
-    return tileGeom;
-    //var tileMesh = new THREE.Mesh(tileGeom, new THREE.MeshBasicMaterial( { color: 0x228011 + (0x100 * Math.round(0xFF * Math.random()) / 2) } ) ) ;
-
-    //return tileMesh;
+    tileGeometry.computeFaceNormals();
+    tileGeometry.computeVertexNormals();
+    return tileGeometry;
 }

@@ -1,2 +1,2 @@
-$ ../../../../3rd_party/emsdk_portable/emscripten/master/emcc -std=c++11 -I./ ../../../../world.cpp -o world.js
+../../../../3rd_party/emsdk_portable/emscripten/master/emcc -s TOTAL_MEMORY=64000000 -O1 -std=c++11 --bind -I./ ../../../../world.cpp ./worldwraper.cpp -o world.js
 

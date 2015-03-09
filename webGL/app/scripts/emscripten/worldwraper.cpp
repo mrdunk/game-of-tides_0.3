@@ -9,12 +9,26 @@
 #include "/home/duncan/Working/git/game-of-tides_0.3/world.h"
 
 
+Node* unordered_set_get(std::unordered_set<Node*> set, int index){
+    auto node = set.begin();
+    int counter = 0;
+    while(node != set.end()){
+        if(counter == index){
+            return *node;
+        }
+        ++node;
+        ++counter;
+    }
+    return NULL;
+}
+
 using namespace emscripten;
 
 
 EMSCRIPTEN_BINDINGS(my_module) {
     function("CreateMapRoot", &CreateMapRoot);
     function("RaiseIslands", &RaiseIslands, allow_raw_pointers());
+    function("DistanceFromShore", &DistanceFromShore, allow_raw_pointers());
 }
 
 EMSCRIPTEN_BINDINGS(stl_wrappers) {
@@ -29,6 +43,7 @@ EMSCRIPTEN_BINDINGS(glm_vec2){
 }
 
 EMSCRIPTEN_BINDINGS(unordered_set){
+  function("unordered_set_get", &unordered_set_get, allow_raw_pointers());
   class_<std::unordered_set<Node*> >("unordered_set")
     .function("size", &std::unordered_set<Node*>::size)
     ;
@@ -45,5 +60,5 @@ EMSCRIPTEN_BINDINGS(my_example) {
   .property("_corners", &Node::_corners)
   .property("populateProgress", &Node::populateProgress)
   .property("recursion", &Node::recursion)
-    ;
+  ;
 }

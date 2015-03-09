@@ -61,12 +61,13 @@ class Node {
          * The root Nodes children and corners have recursion == 1. etc. */
         int recursion;
 
-        /* Height aboce sea level. */
+        /* Height above sea level. */
         int height;
 
-        /* Calculate distance to shore.
-         * Returns: distance or 0 if not a shore tile. */
-        int IsShore();
+        int tilesFromSea;
+
+        /* Whether adjacent to sea or not. */
+        bool IsShore();
 
         Node();
         Node(Node* parent, glm::vec2 coordinate);
@@ -74,14 +75,18 @@ class Node {
         ~Node();
 
         void populate();
-        void populate(bool setCorners);
         void SetAboveSeaLevel();
+        Node* LowestNeighbour();
+
+        /* Test if point is inside this tile. */
+        bool isInside(glm::vec2 point);
     private:
         /* Corners must be inserted in order so we can travese thm in order when drawing a Node.
          * This method inerts them in clockwise rotation with straight up being the lowest posible. */
         void insertCorner(std::shared_ptr<Node> newCorner);
 
-        void populateChild(glm::vec2 & lastcorner, glm::vec2 & thiscorner, glm::vec2 & coordinate);
+        void populateChildren();
+        void populateChildrenSection(glm::vec2 & lastcorner, glm::vec2 & thiscorner, glm::vec2 & coordinate);
 };
 
 
@@ -104,6 +109,6 @@ bool insideBoundary(glm::vec2 coordinate);
 std::shared_ptr<Node> FindClosest(Node* rootNode, glm::vec2 targetCoordinate, int recursion);
 
 void DistanceFromShore(Node* startNode);
-std::unordered_set<Node*> DistanceFromShore(std::unordered_set<Node*> seedset);
+std::unordered_set<Node*> _DistanceFromShore(std::unordered_set<Node*> seedset);
 
 #endif  // GAMEOFTIDES_WORLD_H

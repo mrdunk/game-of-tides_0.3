@@ -33,6 +33,29 @@ struct point_traits<Point> {
 }  // boost
 
 
+// http://www.blackpawn.com/texts/pointinpoly/
+bool isInTriangle(vec2 A, vec2 B, vec2 C, vec2 P){
+    // Compute vectors        
+    vec2 v0 = C - A;
+    vec2 v1 = B - A;
+    vec2 v2 = P - A;
+
+    // Compute dot products
+    float dot00 = glm::dot(v0, v0);
+    float dot01 = glm::dot(v0, v1);
+    float dot02 = glm::dot(v0, v2);
+    float dot11 = glm::dot(v1, v1);
+    float dot12 = glm::dot(v1, v2);
+
+    // Compute barycentric coordinates
+    float invDenom = 1 / (dot00 * dot11 - dot01 * dot01);
+    float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+    float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+    // Check if point is in triangle
+    return (u >= 0) && (v >= 0) && (u + v < 1);
+}
+
 
 Node::Node(Node* parent, vec2 _coordinate){
     parents.insert(parent);
@@ -40,46 +63,75 @@ Node::Node(Node* parent, vec2 _coordinate){
     populateProgress = NODE_UNINITIALISED;
     recursion = parent->recursion +1;
     height = 0;
+    tilesFromSea = -1;
 }
 
 Node::Node(){
     //std::cout << "Node::Node()" << std::endl;
     populateProgress = NODE_UNINITIALISED;
     height = 0;
+    tilesFromSea = -1;
 }
 
 Node::~Node(){
     //std::cout << "Node::~Node()" << std::endl;
 }
 
-void Node::populateChild(vec2 & lastcorner, vec2 & thiscorner, vec2 & coordinate){
+void Node::populateChildren(){
+    if(_children.empty()){
+        bool first = true;
+        vec2 lastcorner, thiscorner;
+
+        for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+            thiscorner = corner->get()->coordinate;
+
+            if(!first){
+                populateChildrenSection(lastcorner, thiscorner, coordinate);
+            }
+            first = false;
+
+            lastcorner = thiscorner;
+        }
+
+        populateChildrenSection(_corners.back()->coordinate, _corners.front()->coordinate, coordinate);
+    }
+}
+
+void Node::populateChildrenSection(vec2 & lastcorner, vec2 & thiscorner, vec2 & coordinate){
     vec2 result;
+    int resultHash;
+    unordered_set<int> alreadyInserted;
 
     if(lastcorner.x < 0 || lastcorner.x > MAPSIZE || lastcorner.y < 0 || lastcorner.y > MAPSIZE ||
             thiscorner.x < 0 || thiscorner.x > MAPSIZE || thiscorner.y < 0 || thiscorner.y > MAPSIZE ||
             coordinate.x < 0 || coordinate.x > MAPSIZE || coordinate.y < 0 || coordinate.y > MAPSIZE){
-        //cout << lastcorner.x << ", " << lastcorner.y << "\t" <<
-        //        thiscorner.x << ", " << thiscorner.y << "\t" <<
-        //        coordinate.x << ", " << coordinate.y << "\t" << endl;
         return;
     }
 
+    int32_t seedNumber;
+    if(recursion){
+        // Recursing through shoreline levels.
+        float area = (max(lastcorner.x, max(thiscorner.x, coordinate.x)) - min(lastcorner.x, min(thiscorner.x, coordinate.x))) *
+            (max(lastcorner.y, max(thiscorner.y, coordinate.y)) - min(lastcorner.y, min(thiscorner.y, coordinate.y)));
 
-    float area = (max(lastcorner.x, max(thiscorner.x, coordinate.x)) - min(lastcorner.x, min(thiscorner.x, coordinate.x))) *
-                    (max(lastcorner.y, max(thiscorner.y, coordinate.y)) - min(lastcorner.y, min(thiscorner.y, coordinate.y)));
+        float expectedArea = MAPSIZE * (MAPSIZE / pow(SHORE_DEPTH, (recursion -1))) / SEED_NUMBER;
 
-    int32_t seedNumber = SEED_NUMBER * pow((recursion +1), 5);
-    seedNumber *= (area / MAPSIZE) / MAPSIZE;       // Divide like this so we don't overflow int with large MAPSIZE.
+        seedNumber = SHORE_DEPTH * area / expectedArea;
+    } else {
+        // Initial layout.
+        seedNumber = SEED_NUMBER;
+    }
 
     for(int i = 0; i < seedNumber; ++i){
         result = (((float)rand() / RAND_MAX) * (lastcorner - coordinate)) + (((float)rand() / RAND_MAX) * (thiscorner - coordinate)) + coordinate;
+        resultHash = (int)result.x ^ (int)result.y;
         if(glm::orientedAngle(glm::normalize(result - thiscorner), glm::normalize(lastcorner - thiscorner)) > 0.0f &&
-                result.x >= 0 && result.x < MAPSIZE && result.y >= 0 && result.y < MAPSIZE){
+                result.x >= 0 && result.x < MAPSIZE && result.y >= 0 && result.y < MAPSIZE &&
+                alreadyInserted.count(resultHash) == 0){
+            alreadyInserted.insert(resultHash);
             _children.push_back(std::make_shared<Node>(this, result));
-            //cout << ".";
         }
     }
-    //cout << endl;
 }
 
 void Node::insertCorner(std::shared_ptr<Node> newCorner){
@@ -110,32 +162,11 @@ void Node::insertCorner(std::shared_ptr<Node> newCorner){
 }
 
 void Node::populate(){
-    populate(true);
-}
+    //cout << "Node::populate()" << endl;
 
-void Node::populate(bool setCorners){
-    cout << "Node::populate()" << endl;
+    populateChildren();
 
-    // Generate children for this node if not already done.
-    if(_children.empty()){
-        bool first = true;
-        vec2 lastcorner, thiscorner;
-
-        for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
-            thiscorner = corner->get()->coordinate;
-
-            if(!first){
-                populateChild(lastcorner, thiscorner, coordinate);
-            }
-            first = false;
-
-            lastcorner = thiscorner;
-        }
-
-        populateChild(_corners.back()->coordinate, _corners.front()->coordinate, coordinate);
-    }
-
-    if(setCorners){
+    if(populateProgress != NODE_COMPLETE){
         // Set points in neighbours.
         unordered_set<Node*> neighbours;
         for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
@@ -143,76 +174,79 @@ void Node::populate(bool setCorners){
                 if(*parent != this && neighbours.count(*parent) == 0){
                     //cout << " parent" << endl;
                     neighbours.insert(*parent);
-                    (*parent)->populate(false);
+                    (*parent)->populateChildren();
                 }
             }
         }
 
         // Calculate voronoi diagram for this node and surrounding points.
-        if(populateProgress != NODE_COMPLETE){
-            // Get list of all points.
-            vector<Point> points;
-            for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
-                points.push_back(Point(*corner, true));
-            }
-            for(auto child = _children.begin(); child != _children.end(); child++){
-                points.push_back(Point(*child, true));
-            }
-
-            // TODO We only need the neighbouring nodes from the nearest triangle.
-            for(auto neighbour = neighbours.begin(); neighbour != neighbours.end(); neighbour++){
-                for(auto corner = (*neighbour)->_corners.begin(); corner != (*neighbour)->_corners.end(); corner++){
-                    points.push_back(Point(*corner, false));
-                }
-                for(auto child = (*neighbour)->_children.begin(); child != (*neighbour)->_children.end(); child++){
-                    points.push_back(Point(*child, false));
-                }
-                if((*neighbour)->populateProgress == NODE_UNINITIALISED){
-                    (*neighbour)->populateProgress = NODE_PARTIAL;
-                }
-            }
-
-            // Build voronoi diagram
-            voronoi_diagram<double> vd;
-            construct_voronoi(points.begin(), points.end(), &vd);
-
-            for(voronoi_diagram<double>::const_cell_iterator it = vd.cells().begin(); it != vd.cells().end(); ++it){
-                // Only save everything if this child is inside parent Node (rather than one of the adjacent nodes).
-                if(points[it->source_index()].primary){
-                    const voronoi_diagram<double>::cell_type &cell0 = *it;
-                    const voronoi_diagram<double>::edge_type *edge = cell0.incident_edge();
-                    std::shared_ptr<Node> workingNode = points[cell0.source_index()].p_node;
-
-                    //cout << "  cell " << cell0.source_index() << endl;
-
-                    // Iterate edges around Voronoi cell.
-                    do{
-                        if(edge->is_primary()){
-                            //const voronoi_diagram<double>::cell_type &cell1 = *edge->twin()->cell();
-                            //cout << "    edge " << cell1.source_index() << endl;
-
-                            if(edge->is_finite()){
-                                auto newCorner = std::make_shared<Node>(workingNode.get(), vec2(edge->vertex0()->x(), edge->vertex0()->y()));
-
-                                const voronoi_diagram<double>::edge_type *rotateEdge = edge;
-                                do {
-                                    // Set every cell adjacent to this corner as a parent of the new corner.
-                                    newCorner->parents.insert(points[rotateEdge->cell()->source_index()].p_node.get());
-
-                                    // Set the new corner as a corner of every adjacent cell.
-                                    points[rotateEdge->cell()->source_index()].p_node->insertCorner(newCorner);
-
-                                    rotateEdge = rotateEdge->rot_next();
-                                } while (rotateEdge != edge);
-                                //cout << endl;
-                            }
-                        }
-                        edge = edge->next();
-                    } while(edge != cell0.incident_edge());
-                }
-            }
-            populateProgress = NODE_COMPLETE;
+        // Get list of all points.
+        vector<Point> points;                   // Voronoi code needs vector as input.
+        unordered_set<Node*> trackAddedPoints;  // Checking "points" vector too timeconsuming so trach added Nodes here as well.
+        for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+            points.push_back(Point(*corner, true));
+            trackAddedPoints.insert(corner->get());
         }
+        for(auto child = _children.begin(); child != _children.end(); child++){
+            points.push_back(Point(*child, true));
+        }
+
+        // TODO We only need the neighbouring nodes from the nearest triangle.
+        for(auto neighbour = neighbours.begin(); neighbour != neighbours.end(); neighbour++){
+            for(auto corner = (*neighbour)->_corners.begin(); corner != (*neighbour)->_corners.end(); corner++){
+                if(trackAddedPoints.count(corner->get()) == 0){
+                    points.push_back(Point(*corner, false));
+                    trackAddedPoints.insert(corner->get());
+                }
+            }
+            for(auto child = (*neighbour)->_children.begin(); child != (*neighbour)->_children.end(); child++){
+                points.push_back(Point(*child, false));
+            }
+            if((*neighbour)->populateProgress == NODE_UNINITIALISED){
+                (*neighbour)->populateProgress = NODE_PARTIAL;
+            }
+        }
+
+        // Build voronoi diagram
+        voronoi_diagram<double> vd;
+        construct_voronoi(points.begin(), points.end(), &vd);
+
+        for(voronoi_diagram<double>::const_cell_iterator it = vd.cells().begin(); it != vd.cells().end(); ++it){
+            // Only save everything if this child is inside parent Node (rather than one of the adjacent nodes).
+            if(points[it->source_index()].primary){
+                const voronoi_diagram<double>::cell_type &cell0 = *it;
+                const voronoi_diagram<double>::edge_type *edge = cell0.incident_edge();
+                std::shared_ptr<Node> workingNode = points[cell0.source_index()].p_node;
+
+                //cout << "  cell " << cell0.source_index() << endl;
+
+                // Iterate edges around Voronoi cell.
+                do{
+                    if(edge->is_primary()){
+                        //const voronoi_diagram<double>::cell_type &cell1 = *edge->twin()->cell();
+                        //cout << "    edge " << cell1.source_index() << endl;
+
+                        if(edge->is_finite()){
+                            auto newCorner = std::make_shared<Node>(workingNode.get(), vec2(edge->vertex0()->x(), edge->vertex0()->y()));
+
+                            const voronoi_diagram<double>::edge_type *rotateEdge = edge;
+                            do {
+                                // Set every cell adjacent to this corner as a parent of the new corner.
+                                newCorner->parents.insert(points[rotateEdge->cell()->source_index()].p_node.get());
+
+                                // Set the new corner as a corner of every adjacent cell.
+                                points[rotateEdge->cell()->source_index()].p_node->insertCorner(newCorner);
+
+                                rotateEdge = rotateEdge->rot_next();
+                            } while (rotateEdge != edge);
+                            //cout << endl;
+                        }
+                    }
+                    edge = edge->next();
+                } while(edge != cell0.incident_edge());
+            }
+        }
+        populateProgress = NODE_COMPLETE;
     }
     //cout << "Node::populate() -" << endl;
 }
@@ -242,47 +276,75 @@ void Node::SetAboveSeaLevel(){
     }
 }
 
-int Node::IsShore(){
+bool Node::IsShore(){
     if(height == 0){
         return 0;
     }
     if(populateProgress == NODE_COMPLETE){
         // NODE_COMPLETE so corners have been fully calculated.
-        int dist, closestDist = MAPSIZE;
         for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
             if((*corner)->height == 0){
                 // One corner is in the sea so this is shore.
-                dist = glm::distance(coordinate, (*corner)->coordinate);
-                if(dist < closestDist){
-                    closestDist = dist;
-                }
+                return true;
             }
-        }
-        if(closestDist != MAPSIZE){
-            cout << "c";
-            return closestDist;
         }
     } else {
         // Corners have not had height set yet.
-        int dist, closestDist = MAPSIZE;
         for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
-            for(auto parent = (*corner)->parents.begin(); parent != (*corner)->parents.end(); ++parent){
-                if((*parent)->height == 0){
-                    // An adjacent parent is in the sea.
-                    (*corner)->height = 0;
-                    dist = glm::distance(coordinate, (*corner)->coordinate);
-                    if(dist < closestDist){
-                        closestDist = dist;
+            for(auto neighbour = (*corner)->parents.begin(); neighbour != (*corner)->parents.end(); ++neighbour){
+                if((*neighbour)->height == 0){
+                    // neighbour is probably sea... but it might be the uncompleted child of a parent land tile.
+                    for(auto neighbourParent = (*neighbour)->parents.begin(); neighbourParent != (*neighbour)->parents.end(); ++neighbourParent){
+                        if((*neighbourParent)->populateProgress == NODE_COMPLETE){
+                            return true;
+                        }
                     }
                 }
             }
         }
-        if(closestDist != MAPSIZE){
-            cout << "d";
-            return closestDist;
+    }
+    return false;
+}
+
+Node* Node::LowestNeighbour(){
+    Node* lowest;
+    int neighbourHeight = MAPSIZE;
+    for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+        for(auto neighbour = (*corner)->parents.begin(); neighbour != (*corner)->parents.end(); ++neighbour){
+            bool neighbourParentSea = false;
+            for(auto neighbourParent = (*neighbour)->parents.begin(); neighbourParent != (*neighbour)->parents.end(); ++neighbourParent){
+                if((*neighbourParent)->populateProgress == NODE_COMPLETE){// && (*neighbourParent)->height == 0){
+                    neighbourParentSea = true;
+                }
+            }
+            if((*neighbour)->height < neighbourHeight && neighbourParentSea && (*neighbour)->tilesFromSea < tilesFromSea){
+                lowest = *neighbour;
+                neighbourHeight = (*neighbour)->height;
+            }
         }
     }
-    return 0;
+    return lowest;
+}
+
+bool Node::isInside(vec2 point){
+    vec2 firstCorner, lastCorner, thisCorner;
+    bool firstLoop = true;
+    for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+        thisCorner = (*corner)->coordinate;
+        if(!firstLoop){
+            if(isInTriangle(coordinate, lastCorner, thisCorner, point)){
+                return true;
+            }
+        } else {
+            firstCorner = thisCorner;
+        }
+        firstLoop = false;
+        lastCorner = thisCorner;
+    }
+    if(isInTriangle(coordinate, lastCorner, firstCorner, point)){
+        return true;
+    }
+    return false;
 }
 
 Node CreateMapRoot(){
@@ -329,6 +391,7 @@ inline int mapToScreenHeight(int y){
 
 std::shared_ptr<Node> FindClosest(Node* startNode, glm::vec2 targetCoordinate, int recursion){
     std::shared_ptr<Node> closest;
+
     int distance = 2 * MAPSIZE;
     bool firstLoop = true;
     int tmpDistance;
@@ -355,9 +418,8 @@ std::shared_ptr<Node> FindClosest(Node* startNode, glm::vec2 targetCoordinate, i
         }
     }
 
-    std::shared_ptr<Node> cadidate;
-    if(closest->recursion != recursion){
-        cadidate = FindClosest(closest.get(), targetCoordinate, recursion);
+    if(closest->recursion != recursion && !closest->_children.empty() && !closest->_corners.empty()){
+        std::shared_ptr<Node> cadidate = FindClosest(closest.get(), targetCoordinate, recursion);
 
         vec2 cadidateDistance = cadidate->coordinate - targetCoordinate;
         vec2 closestDistance = closest->coordinate - targetCoordinate;
@@ -370,7 +432,7 @@ std::shared_ptr<Node> FindClosest(Node* startNode, glm::vec2 targetCoordinate, i
 }
 
 void RaiseIslands(Node* rootNode){
-    cout << "RaiseIslands() " << RAND_MAX << "\t" << endl;  // rand() % MAPSIZE << "\t" << rand() % MAPSIZE << "\t" << rand() % MAPSIZE <<  endl;
+    cout << "RaiseIslands() " << RAND_MAX << "\t" << endl;
     int validMapSize = MAPSIZE * (1 - (2 * WORLD_MARGIN));
     int mapMargin = (MAPSIZE - validMapSize) / 2;
 
@@ -426,34 +488,85 @@ void DistanceFromShore(Node* startNode){
     unordered_set<Node*> seedset;
     seedset.insert(startNode);
     
-    unordered_set<Node*> shore = DistanceFromShore(seedset);
+    unordered_set<Node*> shore = _DistanceFromShore(seedset);
 
-    shore = DistanceFromShore(shore);
+    unordered_set<Node*> shore2 = _DistanceFromShore(shore);
 
     // TODO this just for fun...
-    for(auto shoreNode = shore.begin(); shoreNode != shore.end(); ++shoreNode){
-        (*shoreNode)->populate(true);
-        (*shoreNode)->SetAboveSeaLevel();
+/*    for(auto shoreNode = shore2.begin(); shoreNode != shore2.end(); ++shoreNode){
+        if((*shoreNode)->tilesFromSea == 1){
+            (*shoreNode)->populate();
+            (*shoreNode)->SetAboveSeaLevel();
+        }
     }
+    unordered_set<Node*> shore3 = _DistanceFromShore(shore2);*/
     cout << "DistanceFromShore() -" << endl;
 }
 
-unordered_set<Node*> DistanceFromShore(unordered_set<Node*> seedset){
-    unordered_set<Node*> openset, closedset;
+unordered_set<Node*> _DistanceFromShore(unordered_set<Node*> seedset){
+    unordered_set<Node*> openset, closedset, workingset, lastworkingset;
 
     for(auto seedNode = seedset.begin(); seedNode != seedset.end(); ++seedNode){
         for(auto child = (*seedNode)->_children.begin(); child != (*seedNode)->_children.end(); ++child){
-                
-            int isshore = (*child)->IsShore();
-            if(isshore == 0){
-                openset.insert(child->get());
-            } else {
-                (*child)->height = isshore;
-                closedset.insert(child->get());
+            if((*child)->height){
+                if((*child)->IsShore()){
+                    closedset.insert(child->get());
+                    (*child)->tilesFromSea = 1;
+                } else {
+                    openset.insert(child->get());
+                }
             }
-
+            for(auto corner = (*seedNode)->_corners.begin(); corner != (*seedNode)->_corners.end(); ++corner){
+                if((*corner)->height){
+                    if((*corner)->IsShore()){
+                        closedset.insert(corner->get());
+                        (*corner)->tilesFromSea = 1;
+                    } else {
+                        openset.insert(corner->get());
+                    }
+                }
+            }
         }
     }
+
+    cout << endl;
+
+    lastworkingset.insert(closedset.begin(), closedset.end());
+    unsigned int opensetsize = 0;
+    while(opensetsize != openset.size()){
+        opensetsize = openset.size();
+        cout << openset.size() << " " << closedset.size() << endl;
+
+        for(auto node = lastworkingset.begin(); node != lastworkingset.end(); ++node){
+            Node* lowestNeighbour = (*node)->LowestNeighbour();
+            (*node)->height = lowestNeighbour->height + glm::distance((*node)->coordinate, lowestNeighbour->coordinate);
+            
+            for(auto corner = (*node)->_corners.begin(); corner != (*node)->_corners.end(); ++corner){
+                for(auto neighbour = corner->get()->parents.begin(); neighbour != corner->get()->parents.end(); ++neighbour){
+                    if((openset.count(*neighbour) || workingset.count(*neighbour)) && *neighbour != *node){
+                        if(closedset.count(*neighbour) == 0){
+                            openset.erase(*neighbour);
+                            workingset.insert(*neighbour);
+                            if((*neighbour)->tilesFromSea < (*node)->tilesFromSea +1){
+                                (*neighbour)->tilesFromSea = (*node)->tilesFromSea +1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        closedset.insert(workingset.begin(), workingset.end());
+        swap(lastworkingset, workingset);
+        workingset.clear();
+    }
+
+    for(auto node = lastworkingset.begin(); node != lastworkingset.end(); ++node){
+        Node* lowestNeighbour = (*node)->LowestNeighbour();
+        (*node)->height = lowestNeighbour->height + glm::distance((*node)->coordinate, lowestNeighbour->coordinate);
+        cout << (*node)->height << "\t";
+    }
+    cout << endl;
+    
     cout << " ** " << openset.size() << "\t" << closedset.size() << endl;
 
     return closedset;
