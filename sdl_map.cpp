@@ -128,7 +128,7 @@ void View::DrawMapCursor(){
         _mouseNode = FindClosest(_p_rootNode, dataPos, 3);
         lastDataPos = dataPos;
        
-        cout << "recursion: " << _mouseNode.get()->recursion << "\t" << "tilesFromSea: " << _mouseNode.get()->tilesFromSea << "\t" << "parents:" << _mouseNode.get()->parents.size()  << "\t" << endl;
+        cout << "recursion: " << _mouseNode.get()->recursion << "\t" << "tilesFromSea: " << _mouseNode.get()->tilesFromSea << "\t" << "parents:" << _mouseNode.get()->parents.size()  << "\t" << "height: " << _mouseNode.get()->height << endl;
 
     }
 

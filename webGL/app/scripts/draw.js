@@ -2,7 +2,8 @@ var MAPSIZE = 3600000;
 var mouse = [.5, .5];
 var renderer;
 var mouseClick = false;
-var viewPos = [MAPSIZE / 2, MAPSIZE / 2, MAPSIZE / 2];
+var cameraPositionDiff = new THREE.Vector3( 0, 0, 0 );
+//var cameraRotation = new THREE.Euler( 0, 0, 0, 'XYZ' );
 
 window.onload = function() {
     var rootNode = Module.CreateMapRoot();
@@ -10,22 +11,23 @@ window.onload = function() {
     Module.DistanceFromShore(rootNode);
 
     renderer = new THREE.WebGLRenderer();
-    renderer.setSize( 800, 600 );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+
     document.body.appendChild( renderer.domElement );
 
     var scene = new THREE.Scene();
 
     var camera = new THREE.PerspectiveCamera(
             90,             // Field of view
-            800 / 600,      // Aspect ratio
-            100,            // Near plane
-            //1000,
-            //10000           // Far plane
+            window.innerWidth / window.innerHeight,      // Aspect ratio
+            1000,            // Near plane
             MAPSIZE         // Far plane
             );
-    camera.position.set( MAPSIZE/2, 0, MAPSIZE/2 );
-    var centreStage = new THREE.Vector3(MAPSIZE/2, MAPSIZE/2, 0);
-    camera.lookAt( centreStage );
+
+    camera.position.set( MAPSIZE/2, MAPSIZE/2, MAPSIZE/2 );
+//    camera.up = new THREE.Vector3(0,0,1);
+//    var centreStage = new THREE.Vector3(MAPSIZE/2, MAPSIZE/2, 0);
+//    camera.lookAt( centreStage );
 
     // Background
     var meshes = [createBackground()];
@@ -42,7 +44,6 @@ window.onload = function() {
                 if(newNode){
                     meshes.push(newNode);
                     geometry.merge(meshes[meshes.length -1], meshes[meshes.length -1].matrix);
-                    //scene.add(meshes[meshes.length -1]);
                 }
             }
             for(var grandChild = 0; grandChild < childNode._corners.size(); ++grandChild){
@@ -50,7 +51,6 @@ window.onload = function() {
                 if(newNode){
                     meshes.push(newNode);
                     geometry.merge(meshes[meshes.length -1], meshes[meshes.length -1].matrix);
-                    //scene.add(meshes[meshes.length -1]);
                 }
             }
         }
@@ -58,8 +58,8 @@ window.onload = function() {
     var allMesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial( { color: 0x22AA33 } ) ) ;
     scene.add(allMesh);
 
-    //var allWire = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial( { color: 0xFF0000, wireframe: true } ) ) ;
-    //scene.add(allWire);
+    var allWire = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial( { color: 0xFF0000, wireframe: true } ) ) ;
+    scene.add(allWire);
 
 //    var light2 = new THREE.HemisphereLight( 0xF0F0F0, 0x202020, 1 ); // soft white light
 //    scene.add( light2 );
@@ -77,14 +77,13 @@ window.onload = function() {
 };
 
 function onMouseMove(ev){
-    var x = 1 - (ev.clientX / window.innerWidth);
-    var y = ev.clientY / window.innerHeight;
+    var x = 0.5 - (ev.clientX / window.innerWidth);
+    var y = 0.5 - (ev.clientY / window.innerHeight);
+
 
     if(mouseClick){
-//        viewPos[2] += (y - mouse[1]) * MAPSIZE;
-//    } else {
-        viewPos[0] += (x - mouse[0]) * MAPSIZE;
-        viewPos[1] += (y - mouse[1]) * MAPSIZE;
+        //cameraViewPos[0] += (x - mouse[0]) * MAPSIZE;
+        //cameraViewPos[1] += (y - mouse[1]) * MAPSIZE;
     }
 
     mouse = [x, y];
@@ -100,41 +99,52 @@ function onMouseUp(ev){
 
 function onKeyPress(ev){
     if(ev.keyCode === 43 || ev.keyCode === 61){
-        viewPos[2] /= 1.1;
+        //cameraViewPos[2] /= 1.1;
+        cameraPositionDiff.z = -MAPSIZE/100;
     }
     if(ev.keyCode === 45){
-        viewPos[2] *= 1.1;
+        //cameraViewPos[2] *= 1.1;
+        cameraPositionDiff.z = MAPSIZE/100;
     }
 
 };
+
+var target_position = new THREE.Vector3( 0, 0, 0 );
+var up = new THREE.Vector3(0,0,1);
+var target_x = 0;
+var target_y = 0;
+
+function look(camera, scene){
+
+    target_x -= mouse[0] /100;
+    target_y += mouse[1] /100;
+    target_y = THREE.Math.clamp(target_y, -Math.PI/2 +0.01, Math.PI/2);
+
+    camera.up = up;
+    target_position.x = camera.position.x + 100 * Math.cos( target_y ) * Math.sin( target_x );
+    target_position.y = camera.position.y + 100 * Math.cos( target_y ) * Math.cos( target_x );
+    target_position.z = camera.position.z + 100 * Math.sin( target_y );
+    camera.lookAt(target_position);
+
+    if(mouseClick){
+        camera.translateZ( -MAPSIZE/1000 );
+    }
+}
+
 function render(meshes, scene, camera){
     requestAnimationFrame(function(){render(meshes, scene, camera);});
     stats.begin();
 
-    //for(var meshItterator in meshes){
-    //    meshes[meshItterator].rotation.x += 0.01;
-    //}
-
-    //camera.position.set( MAPSIZE * mouse[0], MAPSIZE * mouse[1], MAPSIZE/2 );
-    camera.position.set(viewPos[0], viewPos[1], viewPos[2]);
+    look(camera, scene);
+    camera.position.addVectors(camera.position, cameraPositionDiff);
+    cameraPositionDiff.set(0,0,0);
+    //camera.position.set(cameraViewPos[0], cameraViewPos[1], cameraViewPos[2]);
 
     renderer.render( scene, camera );
     stats.end();
 }
 
 function createBackground(){
-    /*var tile = new THREE.Shape();
-    tile.moveTo(1, 1);
-    tile.moveTo(MAPSIZE -1, 1);
-    tile.moveTo(MAPSIZE -1, MAPSIZE -1);
-    tile.moveTo(1, MAPSIZE -1);
-    tile.moveTo(1, 1);
-
-    var tileGeom = new THREE.ShapeGeometry(tile);
-    var tileMesh = new THREE.Mesh(tileGeom, new THREE.MeshBasicMaterial( { color: 0x2233AA } ) ) ;
-    
-    return tileMesh;*/
-
     var tileGeom = new THREE.PlaneGeometry(MAPSIZE, MAPSIZE);
     var tileMesh = new THREE.Mesh(tileGeom, new THREE.MeshBasicMaterial( { color: 0x2233AA } ) ) ;
     tileMesh.position.y = MAPSIZE /2;
@@ -149,17 +159,29 @@ function createTile(node){
         return;
     }
     var tileGeometry = new THREE.Geometry();
-    tileGeometry.vertices.push( new THREE.Vector3(node.coordinate.x, node.coordinate.y, node.height / 4) );
+    var height = node.height;
+    var heightCount = 0;
+    if(height === MAPSIZE){
+        height = 4;
+    }
+    tileGeometry.vertices.push( new THREE.Vector3(node.coordinate.x, node.coordinate.y, height / 4) );
     for(var cornerIndex = 0; cornerIndex < node._corners.size(); ++cornerIndex){
-        var height = 0;
         var corner = node._corners.get(cornerIndex);
-        for(var neighbourIndex = 0; neighbourIndex < corner.parents.size(); ++neighbourIndex){
-            var neighbour = Module.unordered_set_get(corner.parents, neighbourIndex);
-            height += neighbour.height;
+        if(corner.height < MAPSIZE && corner.height > 0){
+            height = corner.height;
+        } else {
+            height = 0;
+            heightCount = 0;
+            for(var neighbourIndex = 0; neighbourIndex < corner.parents.size(); ++neighbourIndex){
+                var neighbour = Module.unordered_set_get(corner.parents, neighbourIndex);
+                if(neighbour.height < MAPSIZE){
+                    height += neighbour.height;
+                    heightCount += 1;
+                }
+            }
+            height /= heightCount;
         }
-        height /= corner.parents.size();
         tileGeometry.vertices.push( new THREE.Vector3(corner.coordinate.x, corner.coordinate.y, height / 4) );
-        //tileGeometry.vertices.push( new THREE.Vector3(corner.coordinate.x, corner.coordinate.y, corner.height / 10) );
         if(tileGeometry.vertices.length > 2){
             tileGeometry.faces.push( new THREE.Face3( 0, tileGeometry.vertices.length -2, tileGeometry.vertices.length -1) );
         }
