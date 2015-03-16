@@ -2,14 +2,16 @@
 //#define MAPSIZE 1800000
 #define MAPSIZE 3600000
 
+#define HASHSALT 1112223334
+
 #define SCREEN_WIDTH 1200
 #define SCREEN_HEIGHT 800
 
-#define SEED_NUMBER 200
-#define SHORE_DEPTH 70        // Must be large enough that corners do not overlap. ever. 70 seems good.
+#define SEED_NUMBER 50
+#define SHORE_DEPTH 10        // Must be large enough that corners do not overlap. ever. 70 seems good.
 
 #define ISLAND_NUMBER 40
-#define ISLAND_GROW 12
+#define ISLAND_GROW 20
 
 #define WORLD_MARGIN 0.10     // Area round edge of map with no land.
 

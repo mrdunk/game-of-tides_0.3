@@ -60,5 +60,6 @@ EMSCRIPTEN_BINDINGS(my_example) {
   .property("_corners", &Node::_corners)
   .property("populateProgress", &Node::populateProgress)
   .property("recursion", &Node::recursion)
+  .function("isInside", &Node::isInside)
   ;
 }

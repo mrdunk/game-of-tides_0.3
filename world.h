@@ -28,6 +28,10 @@
 #define NODE_PARTIAL 1
 #define NODE_COMPLETE 2
 
+
+unsigned int MurmurHashNeutral2 ( const void * key, int len, unsigned int seed );
+
+
 /* An area of the map.
  * Reffered to a "cell" on the voronoi diagram. */
 class Node {
@@ -38,6 +42,9 @@ class Node {
         /* Parents of this Node.
          * Regular children will only have one parent but corners may have multiple. */
         std::unordered_set<Node*> parents;
+
+        /* */
+        std::unordered_set<Node*> neighbours;
 
         /* Corners of a Node.
          * These are reffered to as "vertexes" on a voronoi diagram and are end points of voronoi "edges"
@@ -80,13 +87,20 @@ class Node {
 
         /* Test if point is inside this tile. */
         bool isInside(glm::vec2 point);
+
+        /* Is this at the outer edge of parent tile? */
+        bool isEdge();
+
     private:
         /* Corners must be inserted in order so we can travese thm in order when drawing a Node.
          * This method inerts them in clockwise rotation with straight up being the lowest posible. */
         void insertCorner(std::shared_ptr<Node> newCorner);
 
         void populateChildren();
-        void populateChildrenSection(glm::vec2 & lastcorner, glm::vec2 & thiscorner, glm::vec2 & coordinate);
+        void populateChildrenSection(glm::vec2 & lastcorner, glm::vec2 & thiscorner);
+
+        void calculateNeighbours();
+        void calculateChildrensNeighbours();
 };
 
 

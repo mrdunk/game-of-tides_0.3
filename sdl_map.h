@@ -1,6 +1,8 @@
 #ifndef GAMEOFTIDES_SDL_MAP_H
 #define GAMEOFTIDES_SDL_MAP_H
 
+#include <vector>
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
 #include <SDL2/SDL_ttf.h>

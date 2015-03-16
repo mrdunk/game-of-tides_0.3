@@ -5,6 +5,7 @@
 using glm::vec2;
 using std::cout;
 using std::endl;
+using std::vector;
 
 
 View::View(Node* p_rootNode) : zoom(1), wireframe(0), _p_rootNode(p_rootNode), mapDirty(true) {
@@ -128,8 +129,8 @@ void View::DrawMapCursor(){
         _mouseNode = FindClosest(_p_rootNode, dataPos, 3);
         lastDataPos = dataPos;
        
-        cout << "recursion: " << _mouseNode.get()->recursion << "\t" << "tilesFromSea: " << _mouseNode.get()->tilesFromSea << "\t" << "parents:" << _mouseNode.get()->parents.size()  << "\t" << "height: " << _mouseNode.get()->height << endl;
-
+        cout << "recursion: " << _mouseNode.get()->recursion << "\t" << "tilesFromSea: " << _mouseNode.get()->tilesFromSea << 
+            "\t" << "parents:" << _mouseNode.get()->parents.size()  << "\t" << "height: " << _mouseNode.get()->height << endl;
     }
 
     if(mouseClick){
@@ -198,33 +199,42 @@ void View::DrawMapNode(Node* node){
         } else if(node->populateProgress == NODE_PARTIAL){
             // This Node is adjacent to a completed Node.
             // We need to fill in the gaps along the border.
+            vector<vec2> cornerList;
             for(auto child = node->_children.begin(); child != node->_children.end(); child++){
-                if(!(*child)->_corners.empty()){
-                    bool firstLoop = true;
-                    for(auto corner = (*child)->_corners.begin(); corner != (*child)->_corners.end(); corner++){
-                        cornerCoordinate = _ApplyPanOffset(corner->get()->coordinate);
-                        if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
-                            filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
-                                    0x22, 0x33, 0x22, 0xFF);
-                        } else if(firstLoop){
-                            firstCorner = cornerCoordinate;
-                            firstLoop = false;
+                bool firstLoop = true;
+                for(auto corner = (*child)->_corners.begin(); corner != (*child)->_corners.end(); corner++){
+                    cornerCoordinate = corner->get()->coordinate;
+                    if(!firstLoop){
+                        if(!node->isInside(lastCorner) || !node->isInside(cornerCoordinate)){
+                            cornerList.push_back(lastCorner);
+                            cornerList.push_back(cornerCoordinate);
                         }
-                        lastCorner = cornerCoordinate;
+                    } else {
+                        firstCorner = cornerCoordinate;
+                        firstLoop = false;
                     }
-                    // Close loop.
-                    if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
-                        filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, firstCorner.x, firstCorner.y, coordinate.x, coordinate.y,
-                                0x44, 0x66, 0x44, 0xFF);
+                    lastCorner = cornerCoordinate;
+                }
+                if(!firstLoop){
+                    if(!node->isInside(lastCorner) || !node->isInside(firstCorner)){
+                        cornerList.push_back(lastCorner);
+                        cornerList.push_back(firstCorner);
                     }
                 }
+            }
 
-                // Now draw the main bit of the Node.
-                DrawMapNode(child->get());
+            while(cornerList.size()){
+                lastCorner = _ApplyPanOffset(cornerList.back());
+                cornerList.pop_back();
+                cornerCoordinate = _ApplyPanOffset(cornerList.back());
+                cornerList.pop_back();
+                if(InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate)){
+                    filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                            0x22, 0x22, 0x22, 0xCC);
+                }
             }
         }
 
-        
         if(node->populateProgress == NODE_COMPLETE){
             // This Node has completed children so recurse.
             for(auto corner = node->_corners.begin(); corner != node->_corners.end(); corner++){
@@ -233,6 +243,7 @@ void View::DrawMapNode(Node* node){
         }
 
         if(node->populateProgress != NODE_COMPLETE){
+        //if(node->populateProgress == NODE_UNINITIALISED){
             // We need to do this for NODE_PARTIAL and NODE_UNINITIALISED.
             // This draws the polygon in the Node for any Nodes that don't have complete data at lower levels.
             bool firstLoop = true;
@@ -353,8 +364,6 @@ bool View::_RegisterRenderer(){
         std::cout << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
         return 1;
     }
-
-
 
     return 0;
 }
