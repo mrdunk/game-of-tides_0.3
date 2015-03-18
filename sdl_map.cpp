@@ -120,6 +120,7 @@ void View::DrawMapFromRoot(Node* node){
 
 void View::DrawMapCursor(){
     static vec2 lastDataPos;
+    static Node* lastNode;
     vec2 dataPos = _ReversePanOffset(mousePos);
     if(lastDataPos != dataPos){
         // Cursor has moved.
@@ -128,11 +129,39 @@ void View::DrawMapCursor(){
         _mouseNode = FindClosest(_p_rootNode, dataPos, 4);
         lastDataPos = dataPos;
        
-        cout << "recursion: " << _mouseNode.get()->recursion << "\t" << "tilesFromSea: " << _mouseNode.get()->tilesFromSea << 
-            "\t" << "parents:" << _mouseNode.get()->parents.size()  << "\t" << "height: " << _mouseNode.get()->height << endl;
+        //cout << "recursion: " << _mouseNode.get()->recursion << "\t" << "tilesFromSea: " << _mouseNode.get()->tilesFromSea << 
+        //    "\t" << "parents:" << _mouseNode.get()->parents.size()  << "\t" << "height: " << _mouseNode.get()->height << endl;
     }
 
     if(_mouseNode.get()){
+        if(lastNode != _mouseNode.get()){
+            lastNode = _mouseNode.get();
+            
+            cout << (uint64_t)_mouseNode.get() << endl;
+            for(auto neighbour = _mouseNode->neighbours.begin(); neighbour != _mouseNode->neighbours.end(); ++neighbour){
+                cout << "\t" << (uint64_t)(*neighbour) << "\t" << (*neighbour)->neighbours.size() << "\t";
+                if((*neighbour)->parents.size() == 1 && _mouseNode->terrain <= TERRAIN_SHALLOWS && (*neighbour)->terrain == TERRAIN_LAND){
+                    cout << "*";
+                }
+                for(auto neighbourTest = (*((*neighbour)->parents.begin()))->_children.begin();
+                        neighbourTest != (*((*neighbour)->parents.begin()))->_children.end();
+                        ++neighbourTest){
+                    if(neighbourTest->get() == *neighbour){
+                        cout << "y";
+                    }
+                }
+                for(auto neighbourTest = (*((*neighbour)->parents.begin()))->_corners.begin();
+                        neighbourTest != (*((*neighbour)->parents.begin()))->_corners.end();
+                        ++neighbourTest){
+                    if(neighbourTest->get() == *neighbour){
+                        cout << "y";
+                    }
+                }
+                cout << endl;
+            }
+
+        }
+
         SDL_SetRenderDrawColor(rendererMap, 0xFF, 0x00, 0x00, 0xFF );
         vec2 coordinate = _ApplyPanOffset(_mouseNode.get()->coordinate);
         bool firstLoop = true;
@@ -159,6 +188,13 @@ void View::DrawMapCursor(){
         }
 
         SDL_SetRenderDrawColor(rendererMap, 0xAA, 0x00, 0x00, 0xFF );
+        for(auto child = _mouseNode.get()->_children.begin(); child != _mouseNode.get()->_children.end(); ++child){
+            thisPoint = _ApplyPanOffset((*child)->coordinate);
+            SDL_Rect fillRect = {(int)(thisPoint.x -2), (int)(thisPoint.y -2), 4, 4};
+            SDL_RenderFillRect(rendererMap, &fillRect);
+        }
+
+        SDL_SetRenderDrawColor(rendererMap, 0xAA, 0x00, 0x00, 0xFF );
         for(auto parent = _mouseNode.get()->parents.begin(); parent != _mouseNode.get()->parents.end(); ++parent){
             firstLoop = true;
             for(auto corner = (*parent)->_corners.begin(); corner != (*parent)->_corners.end(); ++corner){
@@ -177,7 +213,8 @@ void View::DrawMapCursor(){
         }
 
         if(mouseClick){
-            _mouseNode.get()->populate();
+            //_mouseNode.get()->populate();
+            _mouseNode.get()->SetTerrain();
         }
     }
 }

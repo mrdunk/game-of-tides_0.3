@@ -145,15 +145,9 @@ void Node::populateChildrenSection(vec2 & lastcorner, vec2 & thiscorner){
     }
 
     for(int i = 0; i < seedNumber; ++i){
-        //result = (((float)HashFunction(1000, i, coordinate.x, coordinate.y) / UINT32_MAX) * (lastcorner - coordinate)) + 
-        //         (((float)HashFunction(2000, i, coordinate.x, coordinate.y) / UINT32_MAX) * (thiscorner - coordinate)) + coordinate;
+        result = (((float)HashFunction(1000, i, coordinate.x, coordinate.y) / UINT32_MAX) * (lastcorner - coordinate)) + 
+                 (((float)HashFunction(2000, i, coordinate.x, coordinate.y) / UINT32_MAX) * (thiscorner - coordinate)) + coordinate;
         
-        // Does using "coordinate" as the seed for multiple populateChildrenSection() make shapes regular?
-        result.x = (((float)HashFunction(1000, i, coordinate.x, coordinate.y) / UINT32_MAX) * (lastcorner.x - coordinate.x)) +  
-                 (((float)HashFunction(2000, i, coordinate.x, coordinate.y) / UINT32_MAX) * (thiscorner.x - coordinate.x)) + coordinate.x;
-        result.y = (((float)HashFunction(3000, i, coordinate.x, coordinate.y) / UINT32_MAX) * (lastcorner.y - coordinate.y)) +  
-                 (((float)HashFunction(4000, i, coordinate.x, coordinate.y) / UINT32_MAX) * (thiscorner.y - coordinate.y)) + coordinate.y;
-
         resultHash = (int)result.x ^ (int)result.y;  // Used to make sure there are no duplicates.
         if(glm::orientedAngle(glm::normalize(result - thiscorner), glm::normalize(lastcorner - thiscorner)) > 0.0f &&
                 result.x >= 0 && result.x < MAPSIZE && result.y >= 0 && result.y < MAPSIZE &&
@@ -346,14 +340,27 @@ void Node::_SetTerrainChildren(){
     }
 
     // TODO this could be rolled into the previous for loop.
-    std::unordered_set<Node*> tempary_shore_list;
-    for(auto child = _children.begin(); child != _children.end(); child++){
+    vector<Node*> tempary_shore_list;
+    for(auto child = _children.begin(); child != _children.end(); ++child){
         for(auto neighbour = (*child)->neighbours.begin(); neighbour != (*child)->neighbours.end(); ++neighbour){
             for(auto neighboursParent = (*neighbour)->parents.begin(); neighboursParent != (*neighbour)->parents.end(); ++neighboursParent){
-                if((*neighboursParent) == this){    // neighbour is in sme parent tile.
+                if((*neighboursParent) == this){    // neighbour is in same parent tile.
                     if((*neighbour)->parents.size() == 1){  // Trust corners to be ok already.
-                        if((*child)->terrain == TERRAIN_SHALLOWS && (*neighbour)->terrain == TERRAIN_LAND){
-                            tempary_shore_list.insert(*neighbour);
+                        if((*child)->terrain <= TERRAIN_SHALLOWS && (*neighbour)->terrain == TERRAIN_LAND){
+                            tempary_shore_list.push_back(*neighbour);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+        for(auto neighbour = (*corner)->neighbours.begin(); neighbour != (*corner)->neighbours.end(); ++neighbour){
+            for(auto neighboursParent = (*neighbour)->parents.begin(); neighboursParent != (*neighbour)->parents.end(); ++neighboursParent){
+                if((*neighboursParent) == this){    // neighbour is in same parent tile.
+                    if((*neighbour)->parents.size() == 1){  // Trust corners to be ok already.
+                        if((*corner)->terrain <= TERRAIN_SHALLOWS && (*neighbour)->terrain == TERRAIN_LAND){
+                            tempary_shore_list.push_back(*neighbour);
                         }
                     }
                 }
@@ -363,14 +370,28 @@ void Node::_SetTerrainChildren(){
     for(auto shore = tempary_shore_list.begin(); shore != tempary_shore_list.end(); ++ shore){
         (*shore)->terrain = TERRAIN_SHORE;
     }
-
+/*
+    tempary_shore_list.clear();
     for(auto child = _children.begin(); child != _children.end(); child++){
         for(auto neighbour = (*child)->neighbours.begin(); neighbour != (*child)->neighbours.end(); ++neighbour){
             for(auto neighboursParent = (*neighbour)->parents.begin(); neighboursParent != (*neighbour)->parents.end(); ++neighboursParent){
-                if((*neighboursParent) == this){    // neighbour is in sme parent tile.
-                    if((*child)->terrain == TERRAIN_SHALLOWS && (*neighbour)->terrain == TERRAIN_LAND){
-                        if((*child)->parents.size() == 1){
-//                            (*child)->terrain = TERRAIN_SHORE;
+                if((*neighboursParent) == this){    // neighbour is in same parent tile.
+                    if((*neighbour)->parents.size() <= 1){  // Trust corners to be ok already.
+                        if(((*child)->terrain == TERRAIN_SHORE || (*child)->terrain == TERRAIN_SHALLOWS) && (*neighbour)->terrain == TERRAIN_LAND){
+                            tempary_shore_list.insert(*neighbour);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+        for(auto neighbour = (*corner)->neighbours.begin(); neighbour != (*corner)->neighbours.end(); ++neighbour){
+            for(auto neighboursParent = (*neighbour)->parents.begin(); neighboursParent != (*neighbour)->parents.end(); ++neighboursParent){
+                if((*neighboursParent) == this){    // neighbour is in same parent tile.
+                    if((*neighbour)->parents.size() <= 1){  // Trust corners to be ok already.
+                        if(((*corner)->terrain == TERRAIN_SHORE || (*corner)->terrain == TERRAIN_SHALLOWS) && (*neighbour)->terrain == TERRAIN_LAND){
+                            tempary_shore_list.insert(*neighbour);
                         }
                     }
                 }
@@ -378,28 +399,8 @@ void Node::_SetTerrainChildren(){
         }
     }
 
-/*    tempary_shore_list.clear();
-    for(auto child = _children.begin(); child != _children.end(); child++){
-        for(auto neighbour = (*child)->neighbours.begin(); neighbour != (*child)->neighbours.end(); ++neighbour){
-            for(auto neighboursParent = (*neighbour)->parents.begin(); neighboursParent != (*neighbour)->parents.end(); ++neighboursParent){
-                if((*neighboursParent) == this){    // neighbour is in sme parent tile.
-                    if((*neighbour)->parents.size() == 1){  // Trust corners to be ok already.
-                        if((*child)->terrain == TERRAIN_SHORE && (*neighbour)->terrain == TERRAIN_LAND){
-                            tempary_shore_list.insert(*neighbour);
-                        }
-                        if((*child)->terrain == TERRAIN_SHALLOWS && (*neighbour)->terrain == TERRAIN_LAND){
-                            tempary_shore_list.insert(*neighbour);
-                        }
-                        if((*child)->terrain == TERRAIN_LAND && (*neighbour)->terrain == TERRAIN_SHALLOWS){
-                            tempary_shore_list.insert(child->get());
-                        }
-                    }
-                }
-            }
-        }
-    }
     for(auto shore = tempary_shore_list.begin(); shore != tempary_shore_list.end(); ++ shore){
-        (*shore)->terrain = TERRAIN_SHORE;
+        (*shore)->terrain = 5;//TERRAIN_SHORE;
     }*/
 }
 
@@ -607,13 +608,13 @@ std::shared_ptr<Node> FindClosest(Node* startNode, glm::vec2 targetCoordinate, i
         }
     }
 
-    if(closest->recursion != recursion && !closest->_children.empty() && !closest->_corners.empty()){
+    if(closest->recursion < recursion && !closest->_children.empty() && !closest->_corners.empty()){
         std::shared_ptr<Node> cadidate = FindClosest(closest.get(), targetCoordinate, recursion);
 
         vec2 cadidateDistance = cadidate->coordinate - targetCoordinate;
         vec2 closestDistance = closest->coordinate - targetCoordinate;
-        if(cadidateDistance.x * cadidateDistance.x + cadidateDistance.y * cadidateDistance.y < 
-                closestDistance.x * closestDistance.x + closestDistance.y * closestDistance.y){
+        if((double)cadidateDistance.x * cadidateDistance.x + (double)cadidateDistance.y * cadidateDistance.y < 
+                (double)closestDistance.x * closestDistance.x + (double)closestDistance.y * closestDistance.y){
             return cadidate;
         }
     }

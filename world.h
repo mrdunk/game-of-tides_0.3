@@ -99,12 +99,13 @@ class Node {
         /* Is this at the outer edge of parent tile? */
         bool isEdge();
 
+        void SetTerrain();
     private:
         /* Corners must be inserted in order so we can travese thm in order when drawing a Node.
          * This method inerts them in clockwise rotation with straight up being the lowest posible. */
         void insertCorner(std::shared_ptr<Node> newCorner);
 
-        void SetTerrain();
+        //void SetTerrain();
         void _SetTerrainCorners();
         void _SetTerrainChildren();
 
