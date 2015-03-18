@@ -8,7 +8,7 @@
 #define SCREEN_HEIGHT 800
 
 #define SEED_NUMBER 50
-#define SHORE_DEPTH 10        // Must be large enough that corners do not overlap. ever. 70 seems good.
+#define SHORE_DEPTH 200        // Must be large enough that corners do not overlap. ever. 70 seems good.
 
 #define ISLAND_NUMBER 40
 #define ISLAND_GROW 20

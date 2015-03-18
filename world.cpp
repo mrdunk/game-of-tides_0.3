@@ -5,6 +5,7 @@ using std::vector;
 using std::unordered_set;
 using std::cout;
 using std::endl;
+using std::flush;
 using glm::vec2;
 using boost::polygon::voronoi_diagram;
 using std::max;
@@ -76,6 +77,7 @@ Node::Node(Node* parent, vec2 _coordinate){
     recursion = parent->recursion +1;
     height = 0;
     tilesFromSea = -1;
+    terrain = TERRAIN_UNDEFINED;
 }
 
 Node::Node(){
@@ -83,6 +85,7 @@ Node::Node(){
     populateProgress = NODE_UNINITIALISED;
     height = 0;
     tilesFromSea = -1;
+    terrain = TERRAIN_UNDEFINED;
 }
 
 Node::~Node(){
@@ -91,21 +94,28 @@ Node::~Node(){
 
 void Node::populateChildren(){
     if(_children.empty()){
-        bool first = true;
-        vec2 lastcorner, thiscorner;
+        //if(!recursion || IsShore()){
+        if(!recursion || terrain == TERRAIN_SHORE){
+            // Populate with all children.
+            bool first = true;
+            vec2 lastcorner, thiscorner;
 
-        for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
-            thiscorner = corner->get()->coordinate;
+            for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+                thiscorner = corner->get()->coordinate;
 
-            if(!first){
-                populateChildrenSection(lastcorner, thiscorner);
+                if(!first){
+                    populateChildrenSection(lastcorner, thiscorner);
+                }
+                first = false;
+
+                lastcorner = thiscorner;
             }
-            first = false;
 
-            lastcorner = thiscorner;
+            populateChildrenSection(_corners.back()->coordinate, _corners.front()->coordinate);
+        } else {
+            // Single child Node with same centre coordinate as parent.
+            _children.push_back(std::make_shared<Node>(this, coordinate));
         }
-
-        populateChildrenSection(_corners.back()->coordinate, _corners.front()->coordinate);
     }
 }
 
@@ -190,12 +200,14 @@ void Node::populate(){
         // Make sure neighbours have children populated.
         unordered_set<Node*> allNeighbours;
         for(auto neighbour = neighbours.begin(); neighbour != neighbours.end(); neighbour++){
-            (*neighbour)->populateChildren();
-            allNeighbours.insert(*neighbour);
-            for(auto neighboursNeighbour = (*neighbour)->neighbours.begin(); neighboursNeighbour != (*neighbour)->neighbours.end(); neighboursNeighbour++){
-                if(*neighboursNeighbour != this){
-                    (*neighboursNeighbour)->populateChildren();
-                    allNeighbours.insert(*neighboursNeighbour);
+            if(*neighbour != this){
+                (*neighbour)->populateChildren();
+                allNeighbours.insert(*neighbour);
+                for(auto neighboursNeighbour = (*neighbour)->neighbours.begin(); neighboursNeighbour != (*neighbour)->neighbours.end(); neighboursNeighbour++){
+                    if(*neighboursNeighbour != this){
+                        (*neighboursNeighbour)->populateChildren();
+                        allNeighbours.insert(*neighboursNeighbour);
+                    }
                 }
             }
         }
@@ -204,6 +216,7 @@ void Node::populate(){
         // Get list of all points.
         vector<Point> points;                   // Voronoi code needs vector as input.
         unordered_set<Node*> trackAddedPoints;  // Checking "points" vector for duplicates too timeconsuming so track added Nodes in an unordered_set as well.
+
         for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
             points.push_back(Point(*corner, true));
             trackAddedPoints.insert(corner->get());
@@ -214,7 +227,7 @@ void Node::populate(){
 
         for(auto neighbour = allNeighbours.begin(); neighbour != allNeighbours.end(); neighbour++){
             for(auto corner = (*neighbour)->_corners.begin(); corner != (*neighbour)->_corners.end(); corner++){
-                if(trackAddedPoints.count(corner->get()) == 0){
+                if(trackAddedPoints.count(corner->get()) == 0){     // Corners may be shared with another Node so make sure it hasn't been done already.
                     points.push_back(Point(*corner, false));
                     trackAddedPoints.insert(corner->get());
                 }
@@ -268,21 +281,132 @@ void Node::populate(){
         }
         calculateChildrensNeighbours();
         populateProgress = NODE_COMPLETE;
+
+        // For recursion == 0, we set terrain type elsewhere so we can genrate land masses.
+        if(recursion > 0){
+            SetTerrain();
+        }
     }
     //cout << "Node::populate() -" << endl;
 }
 
-void Node::SetAboveSeaLevel(){
-    height = MAPSIZE;
-    for(auto child = _children.begin(); child != _children.end(); child++){
-        (*child)->height = MAPSIZE;
-        /*for(auto childsCorner = (*child)->_corners.begin(); childsCorner != (*child)->_corners.end(); ++childsCorner){
-            for(auto childsNeghbour = (*childsCorner)->parents.begin(); childsNeghbour != (*childsCorner)->parents.end(); ++childsNeghbour){
-                if(!(*(*childsNeghbour)->parents.begin())->height){
-                    child->get()->height = 0;
+void Node::SetTerrain(){
+    _SetTerrainCorners();
+    _SetTerrainChildren();
+}
+
+void Node::_SetTerrainCorners(){
+    for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+        (*corner)->terrain = TERRAIN_LAND;
+        for(auto parent = (*corner)->parents.begin(); parent != (*corner)->parents.end(); ++parent){
+            if((*parent)->terrain <= TERRAIN_SHALLOWS){
+                (*corner)->terrain = TERRAIN_SHALLOWS;
+                break;
+            }
+        }
+        if((*corner)->terrain == TERRAIN_LAND){
+            for(auto neighbour = (*corner)->neighbours.begin(); neighbour != (*corner)->neighbours.end(); ++neighbour){
+                for(auto neighboursParent = (*neighbour)->parents.begin(); neighboursParent != (*neighbour)->parents.end(); ++neighboursParent){
+                    if((*neighboursParent)->terrain <= TERRAIN_SHALLOWS){
+                        (*corner)->terrain = TERRAIN_SHORE;
+                        break;
+                    }
                 }
             }
-        }*/
+        }
+    }
+}
+
+void Node::_SetTerrainChildren(){
+    for(auto child = _children.begin(); child != _children.end(); child++){
+        if((*child)->terrain == TERRAIN_UNDEFINED){
+            (*child)->terrain = TERRAIN_LAND;
+            for(auto neighbour = (*child)->neighbours.begin(); neighbour != (*child)->neighbours.end(); ++neighbour){
+                if((*neighbour)->terrain == TERRAIN_UNDEFINED && (*neighbour)->parents.size() > 1){
+                    // A neghbour is a corner of a tile too far away to have been calculated yet. Calculate it's corners now.
+                    for(auto neighboursParent = (*neighbour)->parents.begin(); neighboursParent != (*neighbour)->parents.end(); ++neighboursParent){
+                        (*neighboursParent)->_SetTerrainCorners();
+                    }
+                }
+                if((*neighbour)->parents.size() > 1){
+                    // neighbour is a corner. Query it directly.
+                    if((*neighbour)->terrain <= TERRAIN_SHALLOWS){
+                        (*child)->terrain = TERRAIN_SHALLOWS;
+                        break;
+                    }
+                } else {
+                    // neighbour is a child. Query it's parent.
+                    if((*(*neighbour)->parents.begin())->terrain <= TERRAIN_SHALLOWS){
+                        (*child)->terrain = TERRAIN_SHALLOWS;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // TODO this could be rolled into the previous for loop.
+    std::unordered_set<Node*> tempary_shore_list;
+    for(auto child = _children.begin(); child != _children.end(); child++){
+        for(auto neighbour = (*child)->neighbours.begin(); neighbour != (*child)->neighbours.end(); ++neighbour){
+            for(auto neighboursParent = (*neighbour)->parents.begin(); neighboursParent != (*neighbour)->parents.end(); ++neighboursParent){
+                if((*neighboursParent) == this){    // neighbour is in sme parent tile.
+                    if((*neighbour)->parents.size() == 1){  // Trust corners to be ok already.
+                        if((*child)->terrain == TERRAIN_SHALLOWS && (*neighbour)->terrain == TERRAIN_LAND){
+                            tempary_shore_list.insert(*neighbour);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for(auto shore = tempary_shore_list.begin(); shore != tempary_shore_list.end(); ++ shore){
+        (*shore)->terrain = TERRAIN_SHORE;
+    }
+
+    for(auto child = _children.begin(); child != _children.end(); child++){
+        for(auto neighbour = (*child)->neighbours.begin(); neighbour != (*child)->neighbours.end(); ++neighbour){
+            for(auto neighboursParent = (*neighbour)->parents.begin(); neighboursParent != (*neighbour)->parents.end(); ++neighboursParent){
+                if((*neighboursParent) == this){    // neighbour is in sme parent tile.
+                    if((*child)->terrain == TERRAIN_SHALLOWS && (*neighbour)->terrain == TERRAIN_LAND){
+                        if((*child)->parents.size() == 1){
+//                            (*child)->terrain = TERRAIN_SHORE;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+/*    tempary_shore_list.clear();
+    for(auto child = _children.begin(); child != _children.end(); child++){
+        for(auto neighbour = (*child)->neighbours.begin(); neighbour != (*child)->neighbours.end(); ++neighbour){
+            for(auto neighboursParent = (*neighbour)->parents.begin(); neighboursParent != (*neighbour)->parents.end(); ++neighboursParent){
+                if((*neighboursParent) == this){    // neighbour is in sme parent tile.
+                    if((*neighbour)->parents.size() == 1){  // Trust corners to be ok already.
+                        if((*child)->terrain == TERRAIN_SHORE && (*neighbour)->terrain == TERRAIN_LAND){
+                            tempary_shore_list.insert(*neighbour);
+                        }
+                        if((*child)->terrain == TERRAIN_SHALLOWS && (*neighbour)->terrain == TERRAIN_LAND){
+                            tempary_shore_list.insert(*neighbour);
+                        }
+                        if((*child)->terrain == TERRAIN_LAND && (*neighbour)->terrain == TERRAIN_SHALLOWS){
+                            tempary_shore_list.insert(child->get());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for(auto shore = tempary_shore_list.begin(); shore != tempary_shore_list.end(); ++ shore){
+        (*shore)->terrain = TERRAIN_SHORE;
+    }*/
+}
+
+/*void Node::SetAboveSeaLevel(){
+    //height = MAPSIZE;
+    for(auto child = _children.begin(); child != _children.end(); child++){
+        child->get()->height = MAPSIZE;
         for(auto childsNeghbour = (*child)->neighbours.begin(); childsNeghbour != (*child)->neighbours.end(); ++childsNeghbour){
             if(!(*(*childsNeghbour)->parents.begin())->height){
                 child->get()->height = 0;
@@ -304,7 +428,7 @@ void Node::SetAboveSeaLevel(){
 
 bool Node::IsShore(){
     if(height == 0){
-        return 0;
+        return true;
     }
     if(populateProgress == NODE_COMPLETE){
         // NODE_COMPLETE so corners have been fully calculated.
@@ -322,12 +446,15 @@ bool Node::IsShore(){
                     if((*neighbourParent)->populateProgress == NODE_COMPLETE){
                         return true;
                     }
+                    if((*neighbourParent)->height == 0){
+                        return true;
+                    }
                 }
             }
         }
     }
     return false;
-}
+}*/
 
 Node* Node::LowestNeighbour(){
     Node* lowest;
@@ -415,6 +542,7 @@ Node CreateMapRoot(){
 
     rootNode.recursion = 0;
     rootNode.height = MAPSIZE;
+    rootNode.terrain = TERRAIN_ROOT;
 
     vec2 tl = {0, 0};
     auto p_tl = std::make_shared<Node>(&rootNode, tl);
@@ -492,6 +620,16 @@ std::shared_ptr<Node> FindClosest(Node* startNode, glm::vec2 targetCoordinate, i
     return closest;
 }
 
+bool insideBoundary(vec2 coordinate){
+    static long int minMargin = MAPSIZE * WORLD_MARGIN;
+    static long int maxMargin = MAPSIZE - minMargin;
+    if(coordinate.x < minMargin || coordinate.y < minMargin || coordinate.x > maxMargin || coordinate.y > maxMargin){
+        return false;
+    }
+    return true;
+}
+
+/* Pick some random points as seed points for islands. */
 void RaiseIslands(Node* rootNode){
     cout << "RaiseIslands() " << "\t" << endl;
     int validMapSize = MAPSIZE * (1 - (2 * WORLD_MARGIN));
@@ -506,11 +644,16 @@ void RaiseIslands(Node* rootNode){
         _RaiseLand(newIsland.get(), &islandsComplete);
     }
 
+    // Set initial terrain types.
+    _SetTerrain(rootNode);
+
+    // Generate more detail.
     for(auto island = islandsComplete.begin(); island != islandsComplete.end(); ++island){
-        (*island)->SetAboveSeaLevel();
+        (*island)->populate();
     }
 }
 
+/* Extend Islands created in RaiseIslands. */
 void _RaiseLand(Node* islandRoot, unordered_set<Node*>* p_islandsComplete){
     if(p_islandsComplete->count(islandRoot)){
         return;
@@ -518,14 +661,16 @@ void _RaiseLand(Node* islandRoot, unordered_set<Node*>* p_islandsComplete){
     if(!insideBoundary(islandRoot->coordinate)){
         return;
     }
+
+    islandRoot->terrain = TERRAIN_LAND;
     p_islandsComplete->insert(islandRoot);
-    islandRoot->populate();
     islandRoot->height = MAPSIZE;
     int counter = 0;
     for(auto corner = islandRoot->_corners.begin(); corner != islandRoot->_corners.end(); ++corner){
         for(auto parent = corner->get()->parents.begin(); parent != corner->get()->parents.end(); ++parent){
             if(&(*parent) != (Node* const*)islandRoot){
-                if(HashFunction(1, ++counter, (*parent)->coordinate.x, (*parent)->coordinate.y) % 100 <= ISLAND_GROW && (*parent)->coordinate.x > (MAPSIZE * WORLD_MARGIN) && 
+                if(HashFunction(1, ++counter, (*parent)->coordinate.x, (*parent)->coordinate.y) % 100 <= ISLAND_GROW && 
+                        (*parent)->coordinate.x > (MAPSIZE * WORLD_MARGIN) && 
                         (*parent)->coordinate.y > (MAPSIZE * WORLD_MARGIN) && 
                         (*parent)->coordinate.x < (MAPSIZE * (1 - WORLD_MARGIN)) && 
                         (*parent)->coordinate.x < (MAPSIZE * (1 - WORLD_MARGIN))){
@@ -536,13 +681,60 @@ void _RaiseLand(Node* islandRoot, unordered_set<Node*>* p_islandsComplete){
     }
 }
 
-bool insideBoundary(vec2 coordinate){
-    static long int minMargin = MAPSIZE * WORLD_MARGIN;
-    static long int maxMargin = MAPSIZE - minMargin;
-    if(coordinate.x < minMargin || coordinate.y < minMargin || coordinate.x > maxMargin || coordinate.y > maxMargin){
-        return false;
+void _SetTerrain(Node* islandRoot){
+    unordered_set<Node*> closed_set;
+    vector<Node*> working_set;
+    Node* starting_node = FindClosest(islandRoot, {0,0}, 1).get();
+    starting_node->terrain = TERRAIN_SEA;
+
+    // Flood fill the Ocean.
+    working_set.push_back(starting_node);
+    while(working_set.size()){
+        Node* working_node = working_set.back();
+        working_set.pop_back();
+        for(auto neighbour = working_node->neighbours.begin(); neighbour != working_node->neighbours.end(); ++neighbour){
+            if((*neighbour)->terrain <= TERRAIN_SEA && closed_set.find(*neighbour) == closed_set.end()){
+                cout << "*" << flush;
+                closed_set.insert(*neighbour);
+                working_set.push_back(*neighbour);
+                (*neighbour)->terrain = TERRAIN_SEA;
+            } else if((*neighbour)->terrain == TERRAIN_LAND){
+                (*neighbour)->terrain = TERRAIN_SHORE;
+            }
+        }
     }
-    return true;
+    cout << endl;
+
+    // Now any remaining undefined nodes are Land.
+    closed_set.clear();
+    working_set.clear();
+    working_set.push_back(starting_node);
+    while(working_set.size()){
+        Node* working_node = working_set.back();
+        working_set.pop_back();
+        for(auto neighbour = working_node->neighbours.begin(); neighbour != working_node->neighbours.end(); ++neighbour){
+            if(closed_set.find(*neighbour) == closed_set.end()){
+                cout << "#" << flush;
+                closed_set.insert(*neighbour);
+                working_set.push_back(*neighbour);
+                if((*neighbour)->terrain == TERRAIN_UNDEFINED){
+                    (*neighbour)->terrain = TERRAIN_LAND;
+                }
+            }
+        }
+    }
+    cout << endl;
+}
+
+/*void PopulateShore(unordered_set<Node*> target_set){
+
+    for(auto node = target_set.begin(); node != target_set.end(); ++node){
+        (*node)->populate();
+        for(auto child = (*node)->_children.begin(); child != (*node)->_children.end(); ++ child){
+            //working_set.insert(*node);
+            
+        }
+    }
 }
 
 void DistanceFromShore(Node* startNode){
@@ -555,9 +747,9 @@ void DistanceFromShore(Node* startNode){
 
     // TODO this just for fun...
     for(auto shoreNode = shore2.begin(); shoreNode != shore2.end(); ++shoreNode){
-        if((*shoreNode)->tilesFromSea == 1){
+        if((*shoreNode)->tilesFromSea > 0){
             (*shoreNode)->populate();
-            (*shoreNode)->SetAboveSeaLevel();
+            //(*shoreNode)->SetAboveSeaLevel();
         }
     }
     unordered_set<Node*> shore3 = _DistanceFromShore(shore2);
@@ -590,18 +782,16 @@ unordered_set<Node*> _DistanceFromShore(unordered_set<Node*> seedset){
         }
     }
 
-    cout << endl;
-
     lastworkingset.insert(closedset.begin(), closedset.end());
     unsigned int opensetsize = 0;
-    while(opensetsize != openset.size()){
+    while(opensetsize != openset.size()){   // Make sure opensetsize is changing. ie, we are not stalled.
         opensetsize = openset.size();
         cout << openset.size() << " " << closedset.size() << endl;
 
         for(auto node = lastworkingset.begin(); node != lastworkingset.end(); ++node){
             Node* lowestNeighbour = (*node)->LowestNeighbour();
             (*node)->height = lowestNeighbour->height + glm::distance((*node)->coordinate, lowestNeighbour->coordinate);
-            
+
             for(auto corner = (*node)->_corners.begin(); corner != (*node)->_corners.end(); ++corner){
                 for(auto neighbour = corner->get()->parents.begin(); neighbour != corner->get()->parents.end(); ++neighbour){
                     if((openset.count(*neighbour) || workingset.count(*neighbour)) && *neighbour != *node){
@@ -631,5 +821,5 @@ unordered_set<Node*> _DistanceFromShore(unordered_set<Node*> seedset){
     cout << " ** " << openset.size() << "\t" << closedset.size() << endl;
 
     return closedset;
-}
+}*/
 

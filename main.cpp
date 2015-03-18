@@ -23,7 +23,7 @@ int main()
     // Generate map data.
     Node rootMapNode = CreateMapRoot();
     RaiseIslands(&rootMapNode);
-    DistanceFromShore(&rootMapNode);
+    //DistanceFromShore(&rootMapNode);
 
     //return 0;
 

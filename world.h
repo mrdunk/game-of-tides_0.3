@@ -28,6 +28,12 @@
 #define NODE_PARTIAL 1
 #define NODE_COMPLETE 2
 
+#define TERRAIN_UNDEFINED 0
+#define TERRAIN_SEA 1
+#define TERRAIN_SHALLOWS 2
+#define TERRAIN_SHORE 3
+#define TERRAIN_LAND 4
+#define TERRAIN_ROOT 99
 
 unsigned int MurmurHashNeutral2 ( const void * key, int len, unsigned int seed );
 
@@ -71,10 +77,12 @@ class Node {
         /* Height above sea level. */
         int height;
 
+        int terrain;
+
         int tilesFromSea;
 
         /* Whether adjacent to sea or not. */
-        bool IsShore();
+        //bool IsShore();
 
         Node();
         Node(Node* parent, glm::vec2 coordinate);
@@ -95,6 +103,10 @@ class Node {
         /* Corners must be inserted in order so we can travese thm in order when drawing a Node.
          * This method inerts them in clockwise rotation with straight up being the lowest posible. */
         void insertCorner(std::shared_ptr<Node> newCorner);
+
+        void SetTerrain();
+        void _SetTerrainCorners();
+        void _SetTerrainChildren();
 
         void populateChildren();
         void populateChildrenSection(glm::vec2 & lastcorner, glm::vec2 & thiscorner);
@@ -118,11 +130,16 @@ Node CreateMapRoot();
 
 void RaiseIslands(Node* rootNode);
 void _RaiseLand(Node* islandRoot, std::unordered_set<Node*>* islands);
+
+/* Set terrain to TERRAIN_SEA or TERRAIN_LAND during initial CreateMapRoot(). */
+void _SetTerrain(Node* islandRoot);
+
+
 bool insideBoundary(glm::vec2 coordinate);
 
 std::shared_ptr<Node> FindClosest(Node* rootNode, glm::vec2 targetCoordinate, int recursion);
 
-void DistanceFromShore(Node* startNode);
-std::unordered_set<Node*> _DistanceFromShore(std::unordered_set<Node*> seedset);
+//void DistanceFromShore(Node* startNode);
+//std::unordered_set<Node*> _DistanceFromShore(std::unordered_set<Node*> seedset);
 
 #endif  // GAMEOFTIDES_WORLD_H
