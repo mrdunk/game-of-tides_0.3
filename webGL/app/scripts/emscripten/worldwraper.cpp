@@ -28,7 +28,6 @@ using namespace emscripten;
 EMSCRIPTEN_BINDINGS(my_module) {
     function("CreateMapRoot", &CreateMapRoot);
     function("RaiseIslands", &RaiseIslands, allow_raw_pointers());
-    function("DistanceFromShore", &DistanceFromShore, allow_raw_pointers());
 }
 
 EMSCRIPTEN_BINDINGS(stl_wrappers) {

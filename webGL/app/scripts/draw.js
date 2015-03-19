@@ -16,7 +16,6 @@ var MAX_VIEW_DISTANCE = MAPSIZE;
 window.onload = function() {
     var rootNode = Module.CreateMapRoot();
     Module.RaiseIslands(rootNode);
-    Module.DistanceFromShore(rootNode);
 
     renderer = new THREE.WebGLRenderer();
     renderer.setSize( window.innerWidth, window.innerHeight );
@@ -213,7 +212,7 @@ function createBackground(){
 }
 
 function createTile(node){
-    if(!node || node._corners.size() < 3 || node.height <= 0){
+    if(!node || node._corners.size() < 3 || node.terrain <= 2){
         return;
     }
     
@@ -237,7 +236,7 @@ function createTile(node){
     } else if(node.populateProgress == 1){  // NODE_PARTIAL
         // This Node is adjacent to a completed Node.
         // We need to fill in the gaps along the border.
-        tileGeometry.vertices.push( new THREE.Vector3(node.coordinate.x, node.coordinate.y, node.height / 8) );
+        tileGeometry.vertices.push( new THREE.Vector3(node.coordinate.x, node.coordinate.y, node.height) );
         for(var childIndex = 0; childIndex < node._children.size(); ++childIndex){
             var childNode = node._children.get(childIndex);
 
@@ -293,7 +292,7 @@ function createTile(node){
         if(height === MAPSIZE){
             height = 1;
         }
-        tileGeometry.vertices.push( new THREE.Vector3(node.coordinate.x, node.coordinate.y, height / 8) );
+        tileGeometry.vertices.push( new THREE.Vector3(node.coordinate.x, node.coordinate.y, height) );
         var verticesStartLength = tileGeometry.vertices.length -1;
         for(var cornerIndex = 0; cornerIndex < node._corners.size(); ++cornerIndex){
             var corner = node._corners.get(cornerIndex);
@@ -311,7 +310,7 @@ function createTile(node){
                 }
                 height /= heightCount;
             }
-            tileGeometry.vertices.push( new THREE.Vector3(corner.coordinate.x, corner.coordinate.y, height / 8) );
+            tileGeometry.vertices.push( new THREE.Vector3(corner.coordinate.x, corner.coordinate.y, height) );
             if(tileGeometry.vertices.length > 2){
                 tileGeometry.faces.push( new THREE.Face3( verticesStartLength, tileGeometry.vertices.length -2, tileGeometry.vertices.length -1) );
             }

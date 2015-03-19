@@ -137,7 +137,7 @@ void View::DrawMapCursor(){
         if(lastNode != _mouseNode.get()){
             lastNode = _mouseNode.get();
             
-            cout << (uint64_t)_mouseNode.get() << endl;
+            /*cout << (uint64_t)_mouseNode.get() << endl;
             for(auto neighbour = _mouseNode->neighbours.begin(); neighbour != _mouseNode->neighbours.end(); ++neighbour){
                 cout << "\t" << (uint64_t)(*neighbour) << "\t" << (*neighbour)->neighbours.size() << "\t";
                 if((*neighbour)->parents.size() == 1 && _mouseNode->terrain <= TERRAIN_SHALLOWS && (*neighbour)->terrain == TERRAIN_LAND){
@@ -158,8 +158,8 @@ void View::DrawMapCursor(){
                     }
                 }
                 cout << endl;
-            }
-
+            }*/
+            cout << "recursion: " << _mouseNode.get()->recursion << "\theight: " << _mouseNode.get()->height << "\tterrain: " << _mouseNode.get()->terrain << endl;
         }
 
         SDL_SetRenderDrawColor(rendererMap, 0xFF, 0x00, 0x00, 0xFF );
@@ -213,7 +213,7 @@ void View::DrawMapCursor(){
         }
 
         if(mouseClick){
-            //_mouseNode.get()->populate();
+            _mouseNode.get()->populate();
             _mouseNode.get()->SetTerrain();
         }
     }
@@ -223,16 +223,22 @@ void View::DrawMapNode(Node* node){
     vec2 coordinate = _ApplyPanOffset(node->coordinate);
 
     if(node->terrain >= TERRAIN_SHALLOWS || node->terrain == TERRAIN_ROOT){  //node->height){
-        //if(node->recursion >= 1){
+        //if(node->recursion >= 2){
         if(node->populateProgress != NODE_COMPLETE){
             vec2 cornerCoordinate, firstCorner, lastCorner;
             bool firstLoop = true;
             for(auto corner = node->_corners.begin(); corner != node->_corners.end(); corner++){
                 cornerCoordinate = _ApplyPanOffset(corner->get()->coordinate);
                 if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
-                    filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
-                            //0x00, node->height / 2000, 0x00, 0xFF);
-                            0x00, (node->terrain -2) * 50, 0x00, 0xFF);
+                    if(node->terrain > TERRAIN_SHALLOWS){
+                        if(node->height){
+                            filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                    0x88, node->height * 20 / NODE_HEIGHT_STEP, 0x00, 0xFF);
+                        } else {
+                            filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                    0x00, (node->terrain -2) * 50, 0x00, 0xFF);
+                        }
+                    }
                 }
                 firstLoop = false;
                 lastCorner = cornerCoordinate;
@@ -241,9 +247,15 @@ void View::DrawMapNode(Node* node){
             if(!firstLoop){
                 cornerCoordinate = _ApplyPanOffset(node->_corners.front()->coordinate);
                 if(InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate)){
-                    filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
-                            //0x00, node->height / 2000, 0x00, 0xFF);
-                            0x00, (node->terrain -2) * 50, 0x00, 0xFF);
+                    if(node->terrain > TERRAIN_SHALLOWS){
+                        if(node->height){
+                            filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                    0x88, node->height * 20 / NODE_HEIGHT_STEP, 0x00, 0xFF);
+                        } else {
+                            filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
+                                    0x00, (node->terrain -2) * 50, 0x00, 0xFF);
+                        }
+                    }
                 }
             }
         } else {
