@@ -38,9 +38,12 @@ var TEST = new THREE.MeshLambertMaterial( { color: 0xFF0000 } );
 var SKY = 0xAAAABB;
 var MAX_VIEW_DISTANCE = MAPSIZE ;
 
+var settingsWindow;
 
 window.onload = function() {
     "use strict";
+    settingsWindow = document.getElementById('settingsWindow');
+
     var rootNode = Module.CreateMapRoot();
     Module.RaiseIslands(rootNode);
 
@@ -235,6 +238,10 @@ function render(meshes, scene, camera){
 
         scene.children[4].visible = showWireframe;
         scene.children[5].visible = showWireframe;
+
+        settingsWindow.setAttribute('contents', ['position.x', Math.round(camera.position.x)]);
+        settingsWindow.setAttribute('contents', ['position.y', Math.round(camera.position.y)]);
+        settingsWindow.setAttribute('contents', ['position.z', Math.round(camera.position.z)]);
     }
 
     renderer.render( scene, camera );

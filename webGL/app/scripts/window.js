@@ -1,7 +1,7 @@
 //(function(xtag) {
 document.addEventListener('WebComponentsReady',function(){
   'use strict';
-  var childItterator;
+  var childItterator, sectionContent;
 
   xtag.register('x-window', {
     // extend existing elements
@@ -11,6 +11,12 @@ document.addEventListener('WebComponentsReady',function(){
         // fired once at the time a component
         // is initially created or parsed
         xtag.innerHTML(this, '<x-window-header title="' + this.title + '"></x-window-header><x-window-content></<x-window-content>');
+//        this.container = {};
+        for(childItterator in this.children){
+            if(this.children[childItterator].tagName === 'X-WINDOW-CONTENT'){
+                sectionContent = this.children[childItterator];
+            }
+          }
       },
       inserted: function(){
         console.log(" *** x-window.lifecycle.inserted *** ");
@@ -25,22 +31,27 @@ document.addEventListener('WebComponentsReady',function(){
         // fired when attributes are set
       }
     },
+    accessors: {
+      contents: {
+        attribute: { 
+          var: [1,2]
+        },
+        get: function(){
+          console.log('contents.get');
+        },
+        set: function(value){
+          sectionContent.setAttribute('contents', value);
+        }
+      }
+    },
     methods: {
       toggleMinimize: function(){
         if(this.className === 'x-window-min'){
           this.className = 'x-window-max';
-          for(childItterator in this.children){
-            if(this.children[childItterator].tagName === 'X-WINDOW-CONTENT'){
-                this.children[childItterator].style.display = 'block';
-            }
-          }
+          sectionContent.style.display = 'block';
         } else {
           this.className = 'x-window-min';
-          for(childItterator in this.children){
-            if(this.children[childItterator].tagName === 'X-WINDOW-CONTENT'){
-                this.children[childItterator].style.display = 'none';
-            }
-          }          
+          sectionContent.style.display = 'none';
         }
       }
     }
@@ -70,7 +81,7 @@ document.addEventListener('WebComponentsReady',function(){
     events: {
       'click:delegate(x-window)': function(){
         // activate a clicked toggler
-        console.log('click!');
+        console.log('click button!');
         this.toggleMinimize();
       }
     }
@@ -82,14 +93,40 @@ document.addEventListener('WebComponentsReady',function(){
       created: function(){
         // fired once at the time a component
         // is initially created or parsed
-        xtag.innerHTML(this, 'content');
+        this.container = {};
+        this.update();
       }
     },
-    events: {
-      'click:delegate(x-window)': function(){
-        // activate a clicked toggler
-        console.log('click!');
-        this.toggleMinimize();
+    accessors: {
+      contents: {
+        attribute: {
+          var: [1,2]
+        },
+        get: function(){
+          // return all toggler children
+          console.log('contents.get');
+        },
+        set: function(value){
+          // set the toggler children
+          console.log('contents.set(' + value + ')', typeof value, value[0], value[1]);
+          if(typeof value === 'string'){
+            value = value.split(',');
+          }
+          this.container[value[0]] = value[1];
+          console.log(this.container);
+          this.update();
+        }
+      }
+    },
+    methods: {
+      update: function(){
+          var outHtml = '<dl>';
+          for(var key in this.container){
+            outHtml += '<dt>' + key + '</dt>';
+            outHtml += '<dd>' + this.container[key] + '</dd>';
+          }
+          outHtml += '</dl>';
+          xtag.innerHTML(this, outHtml);
       }
     }
   });
