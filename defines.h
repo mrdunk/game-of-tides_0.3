@@ -7,13 +7,13 @@
 #define SCREEN_WIDTH 1200
 #define SCREEN_HEIGHT 800
 
-#define SEED_NUMBER 100
-#define SHORE_DEPTH 50        // The larger this is, the less "blank" patches of coastline.
+#define SEED_NUMBER 50
+#define SHORE_DEPTH 10        // The larger this is, the less "blank" patches of coastline.
 
 #define ISLAND_NUMBER 40
 #define ISLAND_GROW 10
 
-#define NODE_HEIGHT_STEP (MAPSIZE / 100)
+#define NODE_HEIGHT_STEP (MAPSIZE / 300)
 
 #define WORLD_MARGIN 0.10     // Area round edge of map with no land.
 

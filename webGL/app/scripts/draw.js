@@ -1,6 +1,23 @@
-"use strict";
+/* global THREE */
+/* global stats */
+/* global Module */
 
 var MAPSIZE = 3600000;
+
+
+var TERRAIN_UNDEFINED = 0;
+var TERRAIN_SEA = 1;
+var TERRAIN_SHALLOWS = 2;
+var TERRAIN_SHORE = 3;
+var TERRAIN_LAND = 4;
+var TERRAIN_ROOT = 99;
+
+
+var NODE_UNINITIALISED = 0;
+var NODE_PARTIAL = 1;
+var NODE_COMPLETE = 2;
+
+
 var mouse = new THREE.Vector2(0.5, 0.5);
 var renderer;
 var mouseClick = false;
@@ -8,12 +25,22 @@ var cameraPositionDiff = new THREE.Vector3( 0, 0, 0 );
 var cameraAngleDiff  = new THREE.Vector2( 0, -Math.PI/2 );
 var frameCounter = 0;
 var showWireframe = false;
-//var GRASS = new THREE.MeshDepthMaterial();
+
+
 var GRASS = new THREE.MeshLambertMaterial( { color: 0x22AA33 } );
+GRASS.side = THREE.BackSide;
+
+var BEACH = new THREE.MeshLambertMaterial( { color: 0xFFCC00 } );
+BEACH.side = THREE.BackSide;
+
+var TEST = new THREE.MeshLambertMaterial( { color: 0xFF0000 } );
+
 var SKY = 0xAAAABB;
-var MAX_VIEW_DISTANCE = MAPSIZE;
+var MAX_VIEW_DISTANCE = MAPSIZE ;
+
 
 window.onload = function() {
+    "use strict";
     var rootNode = Module.CreateMapRoot();
     Module.RaiseIslands(rootNode);
 
@@ -32,7 +59,6 @@ window.onload = function() {
             window.innerWidth / window.innerHeight,      // Aspect ratio
             100,            // Near plane
             MAX_VIEW_DISTANCE // Far plane
-            //MAPSIZE         // Far plane
             );
     camera.position.set( MAPSIZE/2, MAPSIZE/2, MAX_VIEW_DISTANCE / 2 );
 
@@ -41,38 +67,44 @@ window.onload = function() {
     scene.add(meshes[meshes.length -1]);
 
     console.log("Generating geometry...");
-    var geometry = new THREE.Geometry();
-    var allMesh = new THREE.Mesh(geometry, GRASS ) ;
-    scene.add(allMesh);
+    var grass_geometry = new THREE.Geometry();
+    var beach_geometry = new THREE.Geometry();
+    var testobject_geometry = new THREE.BoxGeometry( 1000, 1000, 1000 );
+    var grassMesh = new THREE.Mesh(grass_geometry, GRASS );
+    var beachMesh = new THREE.Mesh(beach_geometry, BEACH );
+    var testobjectMesh = new THREE.Mesh(testobject_geometry, TEST );
+    meshes.push(testobjectMesh);
+    scene.add(grassMesh);
+    scene.add(beachMesh);
+    scene.add(testobjectMesh);
+
+    var grassWire = new THREE.Mesh(grass_geometry, new THREE.MeshBasicMaterial( { color: 0xFF0000, wireframe: true } ) ) ;
+    var beachWire = new THREE.Mesh(beach_geometry, new THREE.MeshBasicMaterial( { color: 0xFF0000, wireframe: true } ) ) ;
+    scene.add(grassWire);
+    scene.add(beachWire);
 
     for(var child = 0; child < rootNode._children.size(); ++child){
-        if(rootNode._children.get(child).height && rootNode._children.get(child).populateProgress === 2){
-            var childNode = rootNode._children.get(child);
-            for(var grandChild = 0; grandChild < childNode._children.size(); ++grandChild){
-                var newNode = createTile(childNode._children.get(grandChild));
-                if(newNode){
-                    meshes.push(newNode);
-                    geometry.merge(meshes[meshes.length -1], meshes[meshes.length -1].matrix);
-                    //allMesh.add(new THREE.Mesh(newNode, GRASS));
+        var childNode = rootNode._children.get(child);
+        if(childNode.populateProgress === 2){
+            var grandChild, newNode;
+            for(grandChild = 0; grandChild < childNode._children.size(); ++grandChild){
+                newNode = createTile(childNode._children.get(grandChild));
+                meshes.push(newNode);
+                if(childNode.height < MAPSIZE / 100 && childNode.scenery < 200){
+                //if(childNode.terrain === TERRAIN_SHORE){
+                    beach_geometry.merge(meshes[meshes.length -1], meshes[meshes.length -1].matrix);
+                } else {
+                    grass_geometry.merge(meshes[meshes.length -1], meshes[meshes.length -1].matrix);
                 }
             }
-            for(var grandChild = 0; grandChild < childNode._corners.size(); ++grandChild){
-                var newNode = createTile(childNode._corners.get(grandChild));
-                if(newNode){
-                    meshes.push(newNode);
-                    geometry.merge(meshes[meshes.length -1], meshes[meshes.length -1].matrix);
-                    //allMesh.add(new THREE.Mesh(newNode, GRASS));
-                }
+            for(grandChild = 0; grandChild < childNode._corners.size(); ++grandChild){
+                newNode = createTile(childNode._corners.get(grandChild));
+                meshes.push(newNode);
+                grass_geometry.merge(meshes[meshes.length -1], meshes[meshes.length -1].matrix);
             }
         }
     }
     console.log("done.");
-
-    //var allMesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial( { color: 0x22AA33 } ) ) ;
-    //scene.add(allMesh);
-
-    var allWire = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial( { color: 0xFF0000, wireframe: true } ) ) ;
-    scene.add(allWire);
 
 //    var light2 = new THREE.HemisphereLight( 0xF0F0F0, 0x202020, 1 ); // soft white light
 //    scene.add( light2 );
@@ -90,23 +122,27 @@ window.onload = function() {
 };
 
 function onMouseMove(event){
+    "use strict";
     //var x = 0.5 - (ev.clientX / window.innerWidth);
     //var y = 0.5 - (ev.clientY / window.innerHeight);
     //mouse.set(x, y);
     
-    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1
-    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1
-};
+    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+}
 
 function onMouseDown(ev){
+    "use strict";
     mouseClick = true;
-};
+}
 
 function onMouseUp(ev){
+    "use strict";
     mouseClick = false;
-};
+}
 
 function onKeyPress(ev){
+    "use strict";
     console.log(ev.keyCode);
     if(ev.keyCode === 187){
         // +
@@ -132,13 +168,14 @@ function onKeyPress(ev){
         // space
         showWireframe = !showWireframe;
     }
-};
+}
 
 
 var mouseVector = new THREE.Vector3();
 var raycaster = new THREE.Raycaster();
 
 function ProjectMose(camera, scene){
+    "use strict";
     // update the picking ray with the camera and mouse position    
     raycaster.setFromCamera( mouse, camera );   
 
@@ -162,6 +199,7 @@ var target_position = new THREE.Vector3( 0, 0, 0 );
 var up = new THREE.Vector3(0,0,1);
 
 function look(camera, scene){
+    "use strict";
 
     var tempMouse = mouse.clone();
 
@@ -178,10 +216,11 @@ function look(camera, scene){
         camera.translateZ( -MAPSIZE/1000 );
     }
 
-    //camera.position.z = THREE.Math.clamp(camera.position.z, 0, MAPSIZE);
+    camera.position.z = THREE.Math.clamp(camera.position.z, 0, MAPSIZE);
 }
 
 function render(meshes, scene, camera){
+    "use strict";
     requestAnimationFrame(function(){render(meshes, scene, camera);});
     stats.begin();
 
@@ -191,7 +230,11 @@ function render(meshes, scene, camera){
 
     if(frameCounter % 60 === 0){
         //ProjectMose(camera, scene);
-        scene.children[2].visible = showWireframe;
+        meshes[1].position.setX(camera.position.x);
+        meshes[1].position.setY(camera.position.y);
+
+        scene.children[4].visible = showWireframe;
+        scene.children[5].visible = showWireframe;
     }
 
     renderer.render( scene, camera );
@@ -202,6 +245,7 @@ function render(meshes, scene, camera){
 }
 
 function createBackground(){
+    "use strict";
     var tileGeom = new THREE.PlaneGeometry(MAPSIZE, MAPSIZE);
     var tileMesh = new THREE.Mesh(tileGeom, new THREE.MeshBasicMaterial( { color: 0x2233AA } ) ) ;
     tileMesh.position.y = MAPSIZE /2;
@@ -212,114 +256,41 @@ function createBackground(){
 }
 
 function createTile(node){
-    if(!node || node._corners.size() < 3 || node.terrain <= 2){
-        return;
-    }
-    
+    "use strict";
+    //console.log(node.recursion, node.terrain, node._corners.size());
     var tileGeometry = new THREE.Geometry();
 
-    if(node.populateProgress == 2){
-        for(var cornerIndex = 0; cornerIndex < node._corners.size(); ++cornerIndex){
-            var cornerNode = node._corners.get(cornerIndex);
-            var newNode = createTile(cornerNode);
-            if(newNode){
-                tileGeometry.merge(newNode, newNode.matrix);
-            }
-        }
-        for(var childIndex = 0; childIndex < node._children.size(); ++childIndex){
-            var childNode = node._children.get(childIndex);
-            var newNode = createTile(childNode);
-            if(newNode){
-                tileGeometry.merge(newNode, newNode.matrix);
-            }
-        }
-    } else if(node.populateProgress == 1){  // NODE_PARTIAL
-        // This Node is adjacent to a completed Node.
-        // We need to fill in the gaps along the border.
-        tileGeometry.vertices.push( new THREE.Vector3(node.coordinate.x, node.coordinate.y, node.height) );
-        for(var childIndex = 0; childIndex < node._children.size(); ++childIndex){
-            var childNode = node._children.get(childIndex);
+    if(node.terrain >= TERRAIN_SHORE){
+        if(node.populateProgress != NODE_COMPLETE){
+            if(node._corners.size() >= 3){
+                tileGeometry.vertices.push( new THREE.Vector3(node.coordinate.x, MAPSIZE - node.coordinate.y, node.height) );
+                var verticesStartLength = tileGeometry.vertices.length -1;
+                for(var cornerIndex = 0; cornerIndex < node._corners.size(); ++cornerIndex){
+                    var cornerNode = node._corners.get(cornerIndex);
 
-            var firstLoop = true;
-            var firstCorner, lastCorner, cornerCoordinate, firstHeight, lastHeight, cornerHeight;
-            for(var cornerIndex = 0; cornerIndex < childNode._corners.size(); ++cornerIndex){
-                var cornerNode = childNode._corners.get(cornerIndex);
-                cornerCoordinate = cornerNode.coordinate;
-                cornerHeight = cornerNode.height;
-
-                if(cornerHeight > MAPSIZE || cornerHeight < 0){
-                    cornerHeight = 0;
-                    var heightCount = 0;
-                    for(var neighbourIndex = 0; neighbourIndex < cornerNode.parents.size(); ++neighbourIndex){
-                        var neighbour = Module.unordered_set_get(cornerNode.parents, neighbourIndex);
-                        if(neighbour.height < MAPSIZE){
-                            cornerHeight += neighbour.height;
-                            heightCount += 1;
-                        }
+                    if(cornerNode.height > MAPSIZE){
+                        // Something has gone very wrong with this node so just bail.
+                        return new THREE.Geometry();
                     }
-                    cornerHeight /= heightCount;
-                }
 
-                if(!firstLoop){
-                    if(!node.isInside(lastCorner) || !node.isInside(cornerCoordinate)){
-                        tileGeometry.vertices.push( new THREE.Vector3(cornerCoordinate.x, cornerCoordinate.y, cornerHeight / 8));
-                        tileGeometry.vertices.push( new THREE.Vector3(lastCorner.x, lastCorner.y, lastHeight / 8));
-                        tileGeometry.faces.push( new THREE.Face3( 0, tileGeometry.vertices.length -2, tileGeometry.vertices.length -1) );
-                        tileGeometry.faces.push( new THREE.Face3( 0, tileGeometry.vertices.length -1, tileGeometry.vertices.length -2) );  // Reverse side as well.
+                    tileGeometry.vertices.push( new THREE.Vector3(cornerNode.coordinate.x, MAPSIZE - cornerNode.coordinate.y, cornerNode.height) );
+                    if(tileGeometry.vertices.length > 2){
+                        tileGeometry.faces.push( new THREE.Face3( verticesStartLength, tileGeometry.vertices.length -2, tileGeometry.vertices.length -1) );
                     }
-                } else {
-                    firstCorner = cornerCoordinate;
-                    firstHeight = cornerHeight;
-                    firstLoop = false;
                 }
-                lastCorner = cornerCoordinate;
-                lastHeight = cornerHeight;
-            }
-            if(!firstLoop){
-                if(!node.isInside(lastCorner) || !node.isInside(firstCorner)){
-                    tileGeometry.vertices.push( new THREE.Vector3(firstCorner.x, firstCorner.y, firstHeight / 8));
-                    tileGeometry.vertices.push( new THREE.Vector3(lastCorner.x, lastCorner.y, lastHeight / 8));
-                    tileGeometry.faces.push( new THREE.Face3( 0, tileGeometry.vertices.length -2, tileGeometry.vertices.length -1) );
-                    tileGeometry.faces.push( new THREE.Face3( 0, tileGeometry.vertices.length -1, tileGeometry.vertices.length -2) );  // Reverse side as well.
-                }
-            }
-        }
-    }
+                tileGeometry.faces.push( new THREE.Face3( verticesStartLength, tileGeometry.vertices.length -1, verticesStartLength +1) );
 
-    if(node.populateProgress != 2){  // NODE_COMPLETE
-        var height = node.height;
-        var heightCount = 0;
-        if(height === MAPSIZE){
-            height = 1;
-        }
-        tileGeometry.vertices.push( new THREE.Vector3(node.coordinate.x, node.coordinate.y, height) );
-        var verticesStartLength = tileGeometry.vertices.length -1;
-        for(var cornerIndex = 0; cornerIndex < node._corners.size(); ++cornerIndex){
-            var corner = node._corners.get(cornerIndex);
-            if(corner.height < MAPSIZE && corner.height > 0){
-                height = corner.height;
+                tileGeometry.computeFaceNormals();
+                tileGeometry.computeVertexNormals();
             } else {
-                height = 0;
-                heightCount = 0;
-                for(var neighbourIndex = 0; neighbourIndex < corner.parents.size(); ++neighbourIndex){
-                    var neighbour = Module.unordered_set_get(corner.parents, neighbourIndex);
-                    if(neighbour.height < MAPSIZE){
-                        height += neighbour.height;
-                        heightCount += 1;
-                    }
-                }
-                height /= heightCount;
-            }
-            tileGeometry.vertices.push( new THREE.Vector3(corner.coordinate.x, corner.coordinate.y, height) );
-            if(tileGeometry.vertices.length > 2){
-                tileGeometry.faces.push( new THREE.Face3( verticesStartLength, tileGeometry.vertices.length -2, tileGeometry.vertices.length -1) );
+                console.log(node);
             }
         }
-        tileGeometry.faces.push( new THREE.Face3( verticesStartLength, tileGeometry.vertices.length -1, verticesStartLength +1) );
-
-        tileGeometry.computeFaceNormals();
-        tileGeometry.computeVertexNormals();
     }
 
     return tileGeometry;
+}
+
+function createTestObject(){
+
 }

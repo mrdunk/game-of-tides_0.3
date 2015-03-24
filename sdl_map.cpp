@@ -126,7 +126,7 @@ void View::DrawMapCursor(){
         // Cursor has moved.
         mapDirty = true;
 
-        _mouseNode = FindClosest(_p_rootNode, dataPos, 4);
+        _mouseNode = FindClosest(_p_rootNode, dataPos, 10);
         lastDataPos = dataPos;
        
         //cout << "recursion: " << _mouseNode.get()->recursion << "\t" << "tilesFromSea: " << _mouseNode.get()->tilesFromSea << 
@@ -214,7 +214,6 @@ void View::DrawMapCursor(){
 
         if(mouseClick){
             _mouseNode.get()->populate();
-            _mouseNode.get()->SetTerrain();
         }
     }
 }
@@ -222,15 +221,15 @@ void View::DrawMapCursor(){
 void View::DrawMapNode(Node* node){
     vec2 coordinate = _ApplyPanOffset(node->coordinate);
 
-    if(node->terrain >= TERRAIN_SHALLOWS || node->terrain == TERRAIN_ROOT){  //node->height){
-        //if(node->recursion >= 2){
+    if(node->terrain >= TERRAIN_SHORE || node->terrain == TERRAIN_ROOT){  //node->height){
+        //if(node->recursion == 2 && node->populateProgress != NODE_COMPLETE){
         if(node->populateProgress != NODE_COMPLETE){
             vec2 cornerCoordinate, firstCorner, lastCorner;
             bool firstLoop = true;
             for(auto corner = node->_corners.begin(); corner != node->_corners.end(); corner++){
                 cornerCoordinate = _ApplyPanOffset(corner->get()->coordinate);
                 if(!firstLoop && (InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate))){
-                    if(node->terrain > TERRAIN_SHALLOWS){
+                    //if(node->terrain > TERRAIN_SHALLOWS){
                         if(node->height){
                             filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
                                     0x88, node->height * 20 / NODE_HEIGHT_STEP, 0x00, 0xFF);
@@ -238,7 +237,7 @@ void View::DrawMapNode(Node* node){
                             filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
                                     0x00, (node->terrain -2) * 50, 0x00, 0xFF);
                         }
-                    }
+                    //}
                 }
                 firstLoop = false;
                 lastCorner = cornerCoordinate;
@@ -247,7 +246,7 @@ void View::DrawMapNode(Node* node){
             if(!firstLoop){
                 cornerCoordinate = _ApplyPanOffset(node->_corners.front()->coordinate);
                 if(InsideScreenBoundary(coordinate) || InsideScreenBoundary(lastCorner) || InsideScreenBoundary(cornerCoordinate)){
-                    if(node->terrain > TERRAIN_SHALLOWS){
+                    //if(node->terrain > TERRAIN_SHALLOWS){
                         if(node->height){
                             filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
                                     0x88, node->height * 20 / NODE_HEIGHT_STEP, 0x00, 0xFF);
@@ -255,7 +254,7 @@ void View::DrawMapNode(Node* node){
                             filledTrigonRGBA(rendererMap, lastCorner.x, lastCorner.y, cornerCoordinate.x, cornerCoordinate.y, coordinate.x, coordinate.y,
                                     0x00, (node->terrain -2) * 50, 0x00, 0xFF);
                         }
-                    }
+                    //}
                 }
             }
         } else {

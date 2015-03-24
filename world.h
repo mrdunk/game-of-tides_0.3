@@ -77,6 +77,9 @@ class Node {
         /* Height above sea level. */
         int height;
 
+        int scenery;
+
+        /* TERRAIN_SEA, TERRAIN_SHORE, etc. */
         int terrain;
 
         Node();
@@ -129,5 +132,6 @@ bool insideBoundary(glm::vec2 coordinate);
 
 std::shared_ptr<Node> FindClosest(Node* rootNode, glm::vec2 targetCoordinate, int recursion);
 
+uint32_t HashFunction(const int a, const int b, const int c, const int d);
 
 #endif  // GAMEOFTIDES_WORLD_H

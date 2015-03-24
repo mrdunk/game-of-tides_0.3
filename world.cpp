@@ -76,6 +76,7 @@ Node::Node(Node* parent, vec2 _coordinate){
     populateProgress = NODE_UNINITIALISED;
     recursion = parent->recursion +1;
     height = 0;
+    scenery = 0;
     terrain = TERRAIN_UNDEFINED;
 }
 
@@ -83,6 +84,7 @@ Node::Node(){
     //std::cout << "Node::Node()" << std::endl;
     populateProgress = NODE_UNINITIALISED;
     height = 0;
+    scenery = 0;
     terrain = TERRAIN_UNDEFINED;
 }
 
@@ -112,6 +114,7 @@ void Node::populateChildren(){
             // Single child Node with same centre coordinate as parent.
             _children.push_back(std::make_shared<Node>(this, coordinate));
             _children.back().get()->height = height;
+            _children.back().get()->scenery = scenery;
         }
     }
 }
@@ -134,25 +137,40 @@ void Node::populateChildrenSection(Node* lastnode, Node* thisnode){
         float area = (max(lastcorner.x, max(thiscorner.x, coordinate.x)) - min(lastcorner.x, min(thiscorner.x, coordinate.x))) *
             (max(lastcorner.y, max(thiscorner.y, coordinate.y)) - min(lastcorner.y, min(thiscorner.y, coordinate.y)));
 
-        float expectedArea = MAPSIZE * (MAPSIZE / pow(SHORE_DEPTH, (recursion -1))) / SEED_NUMBER;
-
+        // TODO only need to calculate these once then cache.
+        float expectedArea = (MAPSIZE / 4) * (MAPSIZE / pow(SHORE_DEPTH, (recursion -1))) / SEED_NUMBER;
+        
         seedNumber = SHORE_DEPTH * area / expectedArea;
     } else {
-        // Initial layout.
+        // Initial layout. (recursion == 0.)
         seedNumber = SEED_NUMBER;
     }
 
     for(int i = 0; i < seedNumber; ++i){
-        result = (((float)HashFunction(1000, i, coordinate.x, coordinate.y) / UINT32_MAX) * (lastcorner - coordinate)) + 
-                 (((float)HashFunction(2000, i, coordinate.x, coordinate.y) / UINT32_MAX) * (thiscorner - coordinate)) + coordinate;
-        
-        resultHash = (int)result.x ^ (int)result.y;  // Used to make sure there are no duplicates.
+        float last_multiplier = ((float)HashFunction(1000, i, coordinate.x, coordinate.y) / UINT32_MAX);
+        float this_multiplier = ((float)HashFunction(2000, i, coordinate.x, coordinate.y) / UINT32_MAX);
+
+        result = (last_multiplier * (lastcorner - coordinate)) + 
+                 (this_multiplier * (thiscorner - coordinate)) + coordinate;
+
+        // Make sure points are not too close to each other.
+        double scale = 2000 / ((recursion +1) * (recursion +1));   // TODO almost certainly needs adjusted for deeper recusion levels.
+        result.x = floor(result.x / scale) * scale;
+        result.y = floor(result.y / scale) * scale;
+
+        resultHash = (int32_t)result.x ^ (int32_t)result.y;  // Used to make sure there are no duplicates.
         if(glm::orientedAngle(glm::normalize(result - thiscorner), glm::normalize(lastcorner - thiscorner)) > 0.0f &&
                 result.x >= 0 && result.x < MAPSIZE && result.y >= 0 && result.y < MAPSIZE &&
                 alreadyInserted.count(resultHash) == 0){
             alreadyInserted.insert(resultHash);
             _children.push_back(std::make_shared<Node>(this, result));
-            _children.back().get()->height = (height + lastnode->height + thisnode->height) / 3;    // TODO
+
+            _children.back().get()->height = (last_multiplier * (lastnode->height - height)) +
+                (this_multiplier * (thisnode->height - height)) + height;
+
+            _children.back().get()->scenery = (last_multiplier * (lastnode->scenery - scenery)) +
+                (this_multiplier * (thisnode->scenery - scenery)) + scenery +
+                (20 * (float)HashFunction(1000, i, coordinate.x, coordinate.y) / UINT32_MAX) - 10;
         }
     }
 }
@@ -284,12 +302,20 @@ void Node::populate(){
 }
 
 void Node::SetTerrain(){
-    _SetTerrainCorners();
+    //_SetTerrainCorners();
     _SetTerrainChildren();
+
+    for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+        (*corner)->_SetTerrainCorners();
+    }
+    for(auto child = _children.begin(); child != _children.end(); child++){
+        (*child)->_SetTerrainCorners();
+    }
 }
 
 void Node::_SetTerrainCorners(){
-    for(auto corner = _corners.begin(); corner != _corners.end(); corner++){
+    int random_seed = 0;
+    for(auto corner = _corners.begin(); corner != _corners.end(); ++corner){
         (*corner)->terrain = TERRAIN_LAND;
         for(auto parent = (*corner)->parents.begin(); parent != (*corner)->parents.end(); ++parent){
             if((*parent)->terrain <= TERRAIN_SHALLOWS){
@@ -298,8 +324,10 @@ void Node::_SetTerrainCorners(){
                 break;
             }
             (*corner)->height += (*parent)->height;
+            (*corner)->scenery += (*parent)->scenery;
         }
         (*corner)->height /= (*corner)->parents.size();     // Corner has average of parents heights.
+        (*corner)->scenery /= (*corner)->parents.size() + (20 * (float)HashFunction(4000, ++random_seed, coordinate.x, coordinate.y) / UINT32_MAX) - 10;
 
         if((*corner)->terrain == TERRAIN_LAND){
             for(auto neighbour = (*corner)->neighbours.begin(); neighbour != (*corner)->neighbours.end(); ++neighbour){
@@ -465,7 +493,6 @@ Node CreateMapRoot(){
     rootNode.coordinate.y = MAPSIZE / 2;
 
     rootNode.recursion = 0;
-    //rootNode.height = MAPSIZE;
     rootNode.terrain = TERRAIN_ROOT;
 
     vec2 tl = {0, 0};
@@ -590,7 +617,6 @@ void _RaiseLand(Node* islandRoot, unordered_set<Node*>* p_islandsComplete){
 
     islandRoot->terrain = TERRAIN_LAND;
     p_islandsComplete->insert(islandRoot);
-    //islandRoot->height = MAPSIZE;
     int counter = 0;
     for(auto corner = islandRoot->_corners.begin(); corner != islandRoot->_corners.end(); ++corner){
         for(auto parent = corner->get()->parents.begin(); parent != corner->get()->parents.end(); ++parent){
@@ -657,9 +683,11 @@ void _SetTerrain(Node* rootNode){
     std::copy(shoreline_set.begin(), shoreline_set.end(), std::back_inserter(working_set));
     open_set.clear();
     int height = NODE_HEIGHT_STEP;
+    int random_seed = 0;
     while(working_set.size()){
         for(auto working_node = working_set.begin(); working_node != working_set.end(); ++working_node){
             (*working_node)->height = height;
+            (*working_node)->scenery = 1000 * ((float)HashFunction(1000, ++random_seed, (*working_node)->coordinate.x, (*working_node)->coordinate.y) / UINT32_MAX);
             for(auto neighbour = (*working_node)->neighbours.begin(); neighbour != (*working_node)->neighbours.end(); ++neighbour){
                 if((*neighbour)->terrain >= TERRAIN_SHORE){
                     if(closed_set.find(*neighbour) == closed_set.end()){

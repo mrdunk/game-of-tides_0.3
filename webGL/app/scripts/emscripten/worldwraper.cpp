@@ -53,12 +53,13 @@ EMSCRIPTEN_BINDINGS(my_example) {
   class_<Node>("Node")
   .smart_ptr<std::shared_ptr<Node> >("shared_ptr<Node>")
   .property("height", &Node::height)
+  .property("scenery", &Node::scenery)
   .property("coordinate", &Node::coordinate)
   .property("parents", &Node::parents)
   .property("_children", &Node::_children)
   .property("_corners", &Node::_corners)
   .property("populateProgress", &Node::populateProgress)
   .property("recursion", &Node::recursion)
-  .function("isInside", &Node::isInside)
+  .property("terrain", &Node::terrain)
   ;
 }
