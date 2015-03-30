@@ -108,12 +108,10 @@ document.addEventListener('WebComponentsReady',function(){
         },
         set: function(value){
           // set the toggler children
-          console.log('contents.set(' + value + ')', typeof value, value[0], value[1]);
           if(typeof value === 'string'){
             value = value.split(',');
           }
           this.container[value[0]] = value[1];
-          console.log(this.container);
           this.update();
         }
       }

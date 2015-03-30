@@ -1,0 +1,75 @@
+body {
+  overflow: hidden;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+x-window {
+  opacity: 0.8; 
+  position: absolute;
+  right: 0px; 
+  top: 0px;
+  padding: 3px 3px 3px 3px; 
+  background-color: rgb(17, 51, 17);
+}
+
+.x-window-max {
+  width: 200px;
+  height: 200px;
+}
+
+.x-window-min {
+  width: 1em;
+  height: 1em; 
+}
+
+x-window-header {
+  background-color: rgb(0, 34, 0);
+  color: rgb(0, 255, 0); 
+  font-family: Helvetica, Arial, sans-serif; 
+  font-size: 9px; 
+  font-weight: bold; 
+  line-height: 15px;
+  white-space: nowrap;
+  cursor: pointer;
+  display: block;
+}
+
+x-window-button {
+  height: 100%;
+  margin: 0px 3px 0px 0px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+x-window-content {
+  font-size: 9px;
+  color: rgb(0, 255, 0); 
+  font-family: Helvetica, Arial, sans-serif;
+  line-height: 15px;
+  display: block;
+}
+
+x-window-content dl {
+  width:100%;
+  overflow:hidden;
+}
+
+x-window-content dt {
+  float:left;
+  width:50%;
+  padding:0;
+  margin:0;
+  font-weight: bold;
+}
+
+x-window-content dd {
+  float:left;
+  width:50%;
+  padding:0;
+  margin:0;
+}

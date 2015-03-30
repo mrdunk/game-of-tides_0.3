@@ -13,7 +13,7 @@
 #define ISLAND_NUMBER 40
 #define ISLAND_GROW 10
 
-#define NODE_HEIGHT_STEP (MAPSIZE / 300)
+#define NODE_HEIGHT_STEP (MAPSIZE / 200)
 
 #define WORLD_MARGIN 0.10     // Area round edge of map with no land.
 
