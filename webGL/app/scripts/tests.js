@@ -31,3 +31,44 @@ QUnit.test( "TestDataGenerator_reset", function( assert ) {
 
     assert.ok(data_generator.next(), 'data returned');
 });
+
+var MAPSIZE = 3600000;  // TODO break defines out into their own source file.
+QUnit.test( "LandscapeDataGenerator_next", function( assert ) {
+    var data_generator = new LandscapeDataGenerator(3);
+    assert.ok( data_generator, "data_generator ok." );
+
+    var shape = data_generator.next();
+    while(shape){
+        assert.ok(shape.length > 3, "shape has > 3 elements.");   // 1 central and at least 3 points.
+        for(var point_index in shape){
+            assert.strictEqual(shape[point_index].length, 3, "point has 3 coordinates");
+        }
+        shape = data_generator.next();
+    }
+    assert.strictEqual(shape, undefined, 'generator exahusted');
+});
+
+QUnit.test( "LandscapeDataGenerator_reset", function( assert ) {
+    var data_generator = new LandscapeDataGenerator(3);
+    assert.ok( data_generator, "data_generator ok." );
+
+    var count = 0;
+    var shape = data_generator.next();
+    while(shape){
+        shape = data_generator.next();
+        count++;
+    }
+    assert.strictEqual(shape, undefined, 'generator exahusted');
+    assert.strictEqual(shape, undefined, 'generator exahusted');
+    
+    data_generator.reset();
+    var count_2 = 0;
+    shape = data_generator.next();
+    while(shape){
+        shape = data_generator.next();
+        count_2++;
+    }
+
+    assert.strictEqual(count, count_2, 'both passes of generator are same length');
+});
+

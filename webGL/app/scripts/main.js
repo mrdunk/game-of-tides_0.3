@@ -17,7 +17,7 @@ window.onload = function() {
 
     var display = new Display();
     display.setFog(MAX_VIEW_DISTANCE);
-    display.setSea(0);
+    display.setSea(-1000);
     display.setCameraPosition( MAPSIZE/2, MAPSIZE/2, MAX_VIEW_DISTANCE/2 );
     display.updateLandscape();
 

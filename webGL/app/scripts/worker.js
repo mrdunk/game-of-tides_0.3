@@ -1,18 +1,23 @@
 var MAPSIZE = 3600000;  // TODO move this define to seperate file that can be included everywhere.
 
+var data_generator;
+
 self.addEventListener('message', function(e) {
   importScripts('geometries.js');
   importScripts('emscripten/world.js');
 
   self.postMessage(e.data);
 
-  var data_generator;
-  if(e.data.generator_type === 'TestDataGenerator'){
-    data_generator = new TestDataGenerator(e.data.width, e.data.height, e.data.resolution);
-  } else if(e.data.generator_type === 'LandscapeDataGenerator'){
-    data_generator = new LandscapeDataGenerator(e.data.max_recursion);
+  if(!data_generator){
+    if(e.data.generator_type === 'TestDataGenerator'){
+      data_generator = new TestDataGenerator(e.data.width, e.data.height, e.data.resolution);
+    } else if(e.data.generator_type === 'LandscapeDataGenerator'){
+      data_generator = new LandscapeDataGenerator(e.data.max_recursion);
+    } else {
+      return;
+    }
   } else {
-    return;
+    data_generator.reset();
   }
 
   var timer = Date.now();

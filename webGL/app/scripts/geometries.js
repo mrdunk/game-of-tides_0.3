@@ -22,11 +22,14 @@ LandscapeDataGenerator.prototype = {
         if(!this.closed_set[[this.rootNode.coordinate.x, this.rootNode.coordinate.y, this.rootNode.recursion]]){
             this.closed_set[[this.rootNode.coordinate.x, this.rootNode.coordinate.y, this.rootNode.recursion]] = true;
             this.open_list.push(this.rootNode);
+            console.log(this.rootNode.coordinate, this.rootNode._children.size());
         }
     }
     while(this.open_list.length){
         var working_node = this.open_list.pop();
+        console.log(working_node._children.size());
         if(working_node.populateProgress === 2 && this.max_recursion > working_node.recursion){
+            console.log('.');
             for(var child_itterator = 0; child_itterator < working_node._children.size(); ++child_itterator){
                 var child = working_node._children.get(child_itterator);
                 if(!this.closed_set[[child.coordinate.x, child.coordinate.y, child.recursion]]){
@@ -43,9 +46,10 @@ LandscapeDataGenerator.prototype = {
             }
         } else {
             var tile = this.tileShape(working_node);
-            if(tile){ return tile; }
+            if(tile && tile.length >= 3){ return tile; }
         }
     }
+    console.log(this.rootNode.coordinate, this.rootNode._children.size());
 
   },
   reset: function(){
