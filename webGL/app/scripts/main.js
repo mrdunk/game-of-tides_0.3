@@ -16,7 +16,7 @@ window.onload = function() {
     settingsWindow = document.getElementById('settingsWindow');
 
     var display = new Display();
-    //display.setFog(MAX_VIEW_DISTANCE);
+    display.setFog(MAX_VIEW_DISTANCE);
     display.setSea(0);
     display.setCameraPosition( MAPSIZE/2, MAPSIZE/2, MAX_VIEW_DISTANCE/2 );
     display.updateLandscape();
@@ -75,6 +75,17 @@ function Display(){
             MAX_VIEW_DISTANCE // Far plane
             );
 
+    //var data_generator = {generator_type: 'TestDataGenerator', width: MAPSIZE, height: MAPSIZE, resolution: 100};
+    var data_generator = {generator_type: 'LandscapeDataGenerator', max_recursion: 3};
+    this.landscape_geometry = new ComplexGeometry(this.scene, data_generator);
+
+    // TODO move lighting into its own function.
+    var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+    directionalLight.position.set( 0, 0, MAPSIZE );
+    this.scene.add( directionalLight );
+
+    this.framecount = 0;
+
     this.render();
 }
 
@@ -103,11 +114,8 @@ Display.prototype = {
     },
     updateLandscape: function(geometry, bottomLeft, topRight, recursion){
         "use strict";
-        var data_generator = new TestDataGenerator(MAPSIZE, MAPSIZE, 100);
-        geometry = new ComplexGeometry(data_generator);
-        
         var time_in = Date.now();
-        this.scene.add(geometry.AddArea(bottomLeft, topRight, recursion));
+        this.landscape_geometry.AddArea(bottomLeft, topRight, recursion);
         console.log(Date.now() - time_in, 'ms');
     },
     setCameraPosition: function(arg1, arg2, arg3){
@@ -167,6 +175,13 @@ Display.prototype = {
         if(mouse_click === 2){
             this.camera.translateZ(-10000);
         }
+
+        if(this.framecount % 1800 === 0){
+            console.log('tick');
+            this.updateLandscape();
+        }
+
+        this.framecount++;
 
         this.renderer.render( this.scene, this.camera );
 
