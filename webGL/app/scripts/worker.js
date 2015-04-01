@@ -1,10 +1,13 @@
 var MAPSIZE = 3600000;  // TODO move this define to seperate file that can be included everywhere.
 
 var data_generator;
+var counter = 0;
 
 self.addEventListener('message', function(e) {
   importScripts('geometries.js');
   importScripts('emscripten/world.js');
+
+  self.postMessage({counter: counter++});
 
   self.postMessage(e.data);
 
@@ -16,8 +19,6 @@ self.addEventListener('message', function(e) {
     } else {
       return;
     }
-  } else {
-    data_generator.reset();
   }
 
   var timer = Date.now();
@@ -51,11 +52,14 @@ self.addEventListener('message', function(e) {
     shape = data_generator.next();
   }
 
+  data_generator.reset();
+
   var vertices = new Float32Array(vertices_temp);
   var indexes = new Uint32Array(indexes_temp);
+
   var timer = Date.now() - timer;
 
-  self.postMessage({time_spent: timer, vertices: vertices, indexes: indexes}, [vertices.buffer, indexes.buffer]);
+  self.postMessage({time_spent: timer, index: current_index, vertices: vertices, indexes: indexes}, [vertices.buffer, indexes.buffer]);
 }, false);
 
 

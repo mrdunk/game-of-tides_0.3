@@ -25,11 +25,6 @@ Node* unordered_set_get(std::unordered_set<Node*> set, int index){
 using namespace emscripten;
 
 
-EMSCRIPTEN_BINDINGS(my_module) {
-    function("CreateMapRoot", &CreateMapRoot);
-    function("RaiseIslands", &RaiseIslands, allow_raw_pointers());
-}
-
 EMSCRIPTEN_BINDINGS(stl_wrappers) {
   emscripten::register_vector<std::shared_ptr<Node> >("VectorNode");
 }
@@ -48,8 +43,17 @@ EMSCRIPTEN_BINDINGS(unordered_set){
     ;
 }
 
+EMSCRIPTEN_BINDINGS(WorldItterator) {
+  class_<WorldItterator>("WorldItterator")
+  .constructor<Node*, int>()
+  .function("get", &WorldItterator::get, allow_raw_pointers())
+  .function("reset", &WorldItterator::reset);
+}
 
 EMSCRIPTEN_BINDINGS(my_example) {
+  function("CreateMapRoot", &CreateMapRoot);
+  function("RaiseIslands", &RaiseIslands, allow_raw_pointers());
+
   class_<Node>("Node")
   .smart_ptr<std::shared_ptr<Node> >("shared_ptr<Node>")
   .property("height", &Node::height)
@@ -60,6 +64,5 @@ EMSCRIPTEN_BINDINGS(my_example) {
   .property("_corners", &Node::_corners)
   .property("populateProgress", &Node::populateProgress)
   .property("recursion", &Node::recursion)
-  .property("terrain", &Node::terrain)
-  ;
+  .property("terrain", &Node::terrain);
 }

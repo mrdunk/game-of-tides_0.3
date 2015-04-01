@@ -8,58 +8,34 @@ var TERRAIN_ROOT = 99;
 function LandscapeDataGenerator(max_recursion){
   "use strict";
   this.max_recursion = max_recursion;
-  this.reset();
 
-  this.rootNode = Module.CreateMapRoot();
+  this.rootNode = new Module.CreateMapRoot();
   Module.RaiseIslands(this.rootNode);
+
+  this.worldItterator = new Module.WorldItterator(this.rootNode, 2);
+  this.reset();
 }
 
 LandscapeDataGenerator.prototype = {
   constructor: LandscapeDataGenerator,
   next: function(){
     "use strict";
-    if(!this.open_list.length){
-        if(!this.closed_set[[this.rootNode.coordinate.x, this.rootNode.coordinate.y, this.rootNode.recursion]]){
-            this.closed_set[[this.rootNode.coordinate.x, this.rootNode.coordinate.y, this.rootNode.recursion]] = true;
-            this.open_list.push(this.rootNode);
-            console.log(this.rootNode.coordinate, this.rootNode._children.size());
-        }
-    }
-    while(this.open_list.length){
-        var working_node = this.open_list.pop();
-        console.log(working_node._children.size());
-        if(working_node.populateProgress === 2 && this.max_recursion > working_node.recursion){
-            console.log('.');
-            for(var child_itterator = 0; child_itterator < working_node._children.size(); ++child_itterator){
-                var child = working_node._children.get(child_itterator);
-                if(!this.closed_set[[child.coordinate.x, child.coordinate.y, child.recursion]]){
-                    this.closed_set[[child.coordinate.x, child.coordinate.y, child.recursion]] = true;
-                    this.open_list.push(child);
-                }
-            }
-            for(var corner_itterator = 0; corner_itterator < working_node._corners.size(); ++corner_itterator){
-                var corner = working_node._corners.get(corner_itterator);
-                if(!this.closed_set[[corner.coordinate.x, corner.coordinate.y, corner.recursion]]){
-                    this.closed_set[[corner.coordinate.x, corner.coordinate.y, corner.recursion]] = true;
-                    this.open_list.push(corner);
-                }
-            }
-        } else {
-            var tile = this.tileShape(working_node);
-            if(tile && tile.length >= 3){ return tile; }
-        }
-    }
-    console.log(this.rootNode.coordinate, this.rootNode._children.size());
-
+    return this.tileShape(this.worldItterator.get());
   },
   reset: function(){
     "use strict";
+    this.worldItterator.reset();
+
     this.open_list = [];
     this.closed_set = {};
     this.completed_nodes = {};
   },
   tileShape: function(node){
     "use strict";
+    if(!node){
+        return;
+    }
+
     var return_list = [];
 
     if(typeof this.completed_nodes[[node.coordinate.x, node.coordinate.y]] === 'object'){
@@ -84,7 +60,7 @@ LandscapeDataGenerator.prototype = {
     this.completed_nodes[[node.coordinate.x, MAPSIZE - node.coordinate.y].toString()] = true;
     return return_list;
   }
-}
+};
 
 function TestDataGenerator(width, height, point_density){
     "use strict";

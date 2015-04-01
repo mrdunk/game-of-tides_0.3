@@ -34,7 +34,7 @@ QUnit.test( "TestDataGenerator_reset", function( assert ) {
 
 var MAPSIZE = 3600000;  // TODO break defines out into their own source file.
 QUnit.test( "LandscapeDataGenerator_next", function( assert ) {
-    var data_generator = new LandscapeDataGenerator(3);
+    var data_generator = new LandscapeDataGenerator(1);
     assert.ok( data_generator, "data_generator ok." );
 
     var shape = data_generator.next();
@@ -49,7 +49,7 @@ QUnit.test( "LandscapeDataGenerator_next", function( assert ) {
 });
 
 QUnit.test( "LandscapeDataGenerator_reset", function( assert ) {
-    var data_generator = new LandscapeDataGenerator(3);
+    var data_generator = new LandscapeDataGenerator(1);
     assert.ok( data_generator, "data_generator ok." );
 
     var count = 0;

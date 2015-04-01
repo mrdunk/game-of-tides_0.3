@@ -109,6 +109,19 @@ class Node {
 };
 
 
+class WorldItterator {
+    public:
+        WorldItterator(Node* rootNode, int _target_recursion);
+        Node* get();
+        void reset();
+    private:
+        int target_recursion;
+        Node* rootNode;
+        std::unordered_set<Node*> closed;
+        std::vector<Node*> open;
+};
+
+
 /* Data type to pass to construct_voronoi(). */
 struct Point {
     int a;

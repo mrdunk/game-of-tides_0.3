@@ -5,6 +5,8 @@ module.exports = function(grunt) {
       files: ['Gruntfile.js', 'app/scripts/*.js'],
       options: {
         browser: true,
+        bitwise: true,
+        curly: true,
         globals: {
           console: true
         }
@@ -17,7 +19,6 @@ module.exports = function(grunt) {
     connect: {
       server: {
         options: {
-          port: 8001,
           base: 'app'
         }
       }

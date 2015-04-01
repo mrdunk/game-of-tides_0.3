@@ -114,9 +114,7 @@ Display.prototype = {
     },
     updateLandscape: function(geometry, bottomLeft, topRight, recursion){
         "use strict";
-        var time_in = Date.now();
         this.landscape_geometry.AddArea(bottomLeft, topRight, recursion);
-        console.log(Date.now() - time_in, 'ms');
     },
     setCameraPosition: function(arg1, arg2, arg3){
         "use strict";
@@ -133,12 +131,13 @@ Display.prototype = {
         var look_at = new THREE.Vector3( 0, 0, 0 );
         this.camera.up = new THREE.Vector3(0,0,1);
 
+        tilt = THREE.Math.clamp(tilt, -Math.PI/2 +0.01, Math.PI/2);
+
         this.camera_pan = pan;
         this.camera_tilt = tilt;
 
-        tilt = THREE.Math.clamp(tilt, -Math.PI/2 +0.01, Math.PI/2);
         tilt += Math.PI * 2;    // Set tilt==0 to be straight ahead.
-
+        
         look_at.x = this.camera.position.x + 100 * Math.cos( tilt ) * Math.sin( pan );
         look_at.y = this.camera.position.y + 100 * Math.cos( tilt ) * Math.cos( pan );
         look_at.z = this.camera.position.z + 100 * Math.sin( tilt );
@@ -176,7 +175,7 @@ Display.prototype = {
             this.camera.translateZ(-10000);
         }
 
-        if(this.framecount % 1800 === 0){
+        if(this.framecount % 3600 === 0){
             console.log('tick');
             this.updateLandscape();
         }

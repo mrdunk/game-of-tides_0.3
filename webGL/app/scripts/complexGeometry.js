@@ -20,8 +20,6 @@ function ComplexGeometry(scene, data_generator){
           this.geometry.dispose();
           this.scene.remove(this.mesh.name);
 
-          console.log(e.data);
-
           this.geometry.addAttribute( 'position', new THREE.BufferAttribute(e.data.vertices, 3 ) );
           this.geometry.addAttribute( 'index', new THREE.BufferAttribute(e.data.indexes, 1 ) );
           this.geometry.computeVertexNormals();
@@ -31,6 +29,9 @@ function ComplexGeometry(scene, data_generator){
           this.scene.add(this.mesh);
         }
     }.bind(this), false);
+    this.worker.onerror = function(e) {
+      alert("Error in file: "+e.filename+"\nline: "+e.lineno+"\nDescription: "+e.message);
+    };
 }
 
 ComplexGeometry.prototype = {

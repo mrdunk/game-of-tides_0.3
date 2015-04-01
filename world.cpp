@@ -703,3 +703,39 @@ void _SetTerrain(Node* rootNode){
     }
 }
 
+
+WorldItterator::WorldItterator(Node* _rootNode, int _target_recursion){
+    rootNode = _rootNode;
+    target_recursion = _target_recursion;
+
+    reset();
+}
+
+Node* WorldItterator::get(){
+    Node* working_node;
+    while(!open.empty()){
+        working_node = open.back();
+        open.pop_back();
+        closed.insert(working_node);
+        if(working_node->recursion == target_recursion){
+            return working_node;
+        }
+        for(auto child = working_node->_children.begin(); child != working_node->_children.end(); ++child){
+            if(!closed.count(child->get())){
+                open.push_back(child->get());
+            }
+        }
+        for(auto corner = working_node->_corners.begin(); corner != working_node->_corners.end(); ++corner){
+            if(!closed.count(corner->get())){
+                open.push_back(corner->get());
+            }
+        }
+    }
+    return NULL;
+}
+
+void WorldItterator::reset(){
+    open.clear();
+    open.push_back(rootNode);
+    closed.clear();
+}
