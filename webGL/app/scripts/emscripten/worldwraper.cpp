@@ -53,7 +53,9 @@ EMSCRIPTEN_BINDINGS(WorldItterator) {
 EMSCRIPTEN_BINDINGS(my_example) {
   function("CreateMapRoot", &CreateMapRoot);
   function("RaiseIslands", &RaiseIslands, allow_raw_pointers());
+}
 
+EMSCRIPTEN_BINDINGS(my_example_2) {
   class_<Node>("Node")
   .smart_ptr<std::shared_ptr<Node> >("shared_ptr<Node>")
   .property("height", &Node::height)

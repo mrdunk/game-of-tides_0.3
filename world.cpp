@@ -721,12 +721,12 @@ Node* WorldItterator::get(){
             return working_node;
         }
         for(auto child = working_node->_children.begin(); child != working_node->_children.end(); ++child){
-            if(!closed.count(child->get())){
+            if(closed.find(child->get()) == closed.end()){
                 open.push_back(child->get());
             }
         }
         for(auto corner = working_node->_corners.begin(); corner != working_node->_corners.end(); ++corner){
-            if(!closed.count(corner->get())){
+            if(closed.find(corner->get()) == closed.end()){
                 open.push_back(corner->get());
             }
         }

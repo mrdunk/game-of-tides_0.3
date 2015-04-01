@@ -175,7 +175,7 @@ Display.prototype = {
             this.camera.translateZ(-10000);
         }
 
-        if(this.framecount % 3600 === 0){
+        if(this.framecount % 1200 === 0){
             console.log('tick');
             this.updateLandscape();
         }
