@@ -111,9 +111,10 @@ class Node {
 
 class WorldItterator {
     public:
-        WorldItterator(Node* rootNode, int _target_recursion);
+        WorldItterator(Node* rootNode);
         Node* get();
         void reset();
+        void setRecursion(int recursion);
     private:
         int target_recursion;
         Node* rootNode;

@@ -704,10 +704,9 @@ void _SetTerrain(Node* rootNode){
 }
 
 
-WorldItterator::WorldItterator(Node* _rootNode, int _target_recursion){
+WorldItterator::WorldItterator(Node* _rootNode){
+    target_recursion = 1;
     rootNode = _rootNode;
-    target_recursion = _target_recursion;
-
     reset();
 }
 
@@ -717,7 +716,7 @@ Node* WorldItterator::get(){
         working_node = open.back();
         open.pop_back();
         closed.insert(working_node);
-        if(working_node->recursion == target_recursion){
+        if(working_node->recursion == target_recursion && working_node->_corners.size() >= 3){
             return working_node;
         }
         for(auto child = working_node->_children.begin(); child != working_node->_children.end(); ++child){
@@ -738,4 +737,8 @@ void WorldItterator::reset(){
     open.clear();
     open.push_back(rootNode);
     closed.clear();
+}
+
+void WorldItterator::setRecursion(int recursion){
+    target_recursion = recursion;
 }

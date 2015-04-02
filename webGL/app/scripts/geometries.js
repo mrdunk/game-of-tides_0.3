@@ -5,14 +5,13 @@ var TERRAIN_SHORE = 3;
 var TERRAIN_LAND = 4;
 var TERRAIN_ROOT = 99;
 
-function LandscapeDataGenerator(max_recursion){
+function LandscapeDataGenerator(){
   "use strict";
-  this.max_recursion = max_recursion;
-
   this.rootNode = new Module.CreateMapRoot();
   Module.RaiseIslands(this.rootNode);
 
-  this.worldItterator = new Module.WorldItterator(this.rootNode, 2);
+  this.worldItterator = new Module.WorldItterator(this.rootNode);
+
   this.reset();
 }
 
@@ -20,7 +19,14 @@ LandscapeDataGenerator.prototype = {
   constructor: LandscapeDataGenerator,
   next: function(){
     "use strict";
-    return this.tileShape(this.worldItterator.get());
+    var node = this.worldItterator.get();
+    while(node){
+        var shape = this.tileShape(node);
+        if(shape.length > 3){
+            return shape;
+        }
+        node = this.worldItterator.get();
+    }
   },
   reset: function(){
     "use strict";
@@ -29,6 +35,10 @@ LandscapeDataGenerator.prototype = {
     this.open_list = [];
     this.closed_set = {};
     this.completed_nodes = {};
+  },
+  setRecursion: function(recursion){
+    "use strict";
+    this.worldItterator.setRecursion(recursion);
   },
   tileShape: function(node){
     "use strict";
@@ -52,7 +62,7 @@ LandscapeDataGenerator.prototype = {
           // Something has gone very wrong with this node so just bail.
           return;
         }
-
+        
         return_list.push([cornerNode.coordinate.x, MAPSIZE - cornerNode.coordinate.y, cornerNode.height]);
       }
     }

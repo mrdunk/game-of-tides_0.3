@@ -45,9 +45,10 @@ EMSCRIPTEN_BINDINGS(unordered_set){
 
 EMSCRIPTEN_BINDINGS(WorldItterator) {
   class_<WorldItterator>("WorldItterator")
-  .constructor<Node*, int>()
+  .constructor<Node*>()
   .function("get", &WorldItterator::get, allow_raw_pointers())
-  .function("reset", &WorldItterator::reset);
+  .function("reset", &WorldItterator::reset)
+  .function("setRecursion", &WorldItterator::setRecursion);
 }
 
 EMSCRIPTEN_BINDINGS(my_example) {

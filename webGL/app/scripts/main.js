@@ -17,9 +17,8 @@ window.onload = function() {
 
     var display = new Display();
     display.setFog(MAX_VIEW_DISTANCE);
-    display.setSea(-1000);
+    display.setSea(1000);
     display.setCameraPosition( MAPSIZE/2, MAPSIZE/2, MAX_VIEW_DISTANCE/2 );
-    display.updateLandscape();
 
     display.setCameraDirection(0, -Math.PI / 2);
 
@@ -76,7 +75,7 @@ function Display(){
             );
 
     //var data_generator = {generator_type: 'TestDataGenerator', width: MAPSIZE, height: MAPSIZE, resolution: 100};
-    var data_generator = {generator_type: 'LandscapeDataGenerator', max_recursion: 3};
+    var data_generator = {generator_type: 'LandscapeDataGenerator', max_recursion: 1};
     this.landscape_geometry = new ComplexGeometry(this.scene, data_generator);
 
     // TODO move lighting into its own function.
@@ -84,7 +83,9 @@ function Display(){
     directionalLight.position.set( 0, 0, MAPSIZE );
     this.scene.add( directionalLight );
 
-    this.framecount = 0;
+    this.framecount = 1;
+
+    this.recursion_target = 1;
 
     this.render();
 }
@@ -112,9 +113,10 @@ Display.prototype = {
         "use strict";
         // TODO
     },
-    updateLandscape: function(geometry, bottomLeft, topRight, recursion){
+    updateLandscape: function(geometry, bottomLeft, topRight){
         "use strict";
-        this.landscape_geometry.AddArea(bottomLeft, topRight, recursion);
+        this.landscape_geometry.AddArea(bottomLeft, topRight, this.recursion_target);
+        this.recursion_actual = this.recursion_target;
     },
     setCameraPosition: function(arg1, arg2, arg3){
         "use strict";
@@ -125,6 +127,7 @@ Display.prototype = {
             // A vector.
             this.camera.position = arg1;
         }
+        this.updateSettingsDisplay();
     },
     setCameraDirection: function(pan, tilt){
         "use strict";
@@ -143,6 +146,7 @@ Display.prototype = {
         look_at.z = this.camera.position.z + 100 * Math.sin( tilt );
         this.camera.lookAt(look_at);
 
+        this.updateSettingsDisplay();
     },
     updateCameraPosition: function(position_diff){
         "use strict";
@@ -173,11 +177,12 @@ Display.prototype = {
         }
         if(mouse_click === 2){
             this.camera.translateZ(-10000);
+            this.updateSettingsDisplay();
         }
 
-        if(this.framecount % 1200 === 0){
-            console.log('tick');
-            this.updateLandscape();
+        if(this.recursion_actual !== this.recursion_target){
+            console.log('updateLandscape');
+            this.updateLandscape(false, false, false);
         }
 
         this.framecount++;
@@ -186,5 +191,16 @@ Display.prototype = {
 
         // Stats widget. Displays fps, etc.
         stats.end();
+    },
+    updateSettingsDisplay: function(){
+        "use strict";
+        this.recursion_target = Math.round(Math.sqrt(MAPSIZE / this.camera.position.z));
+
+        settingsWindow.setAttribute('contents', ['position.x', Math.round(this.camera.position.x)]);
+        settingsWindow.setAttribute('contents', ['position.y', Math.round(this.camera.position.y)]);
+        settingsWindow.setAttribute('contents', ['position.z', Math.round(this.camera.position.z)]);
+        settingsWindow.setAttribute('contents', ['pan', Math.round(this.camera_pan * 180 / Math.PI)]);
+        settingsWindow.setAttribute('contents', ['tilt', Math.round(this.camera_tilt * 180 / Math.PI)]);
+        settingsWindow.setAttribute('contents', ['recursion', this.recursion_target]);
     }
 };
