@@ -1,3 +1,4 @@
+/* global THREE */
 
 
 function ComplexGeometry(scene, data_generator){
@@ -48,10 +49,10 @@ ComplexGeometry.prototype = {
         this.data_generator.max_recursion = recursion;
         this.worker.postMessage(this.data_generator);
     },
-    RemoveArea: function(top_left, bottom_right){
+    /*RemoveArea: function(top_left, bottom_right){
     },
     AddTile: function(corners){
     },
     RemoveTile: function(centre){
-    }
+    }*/
 };

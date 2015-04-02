@@ -1,3 +1,6 @@
+/* global stats */
+/* global THREE */
+/* global ComplexGeometry */
 
 var MAPSIZE = 3600000;
 var SKY = 0xAAAABB;
@@ -11,36 +14,18 @@ var mouse_move = new THREE.Vector2(0, 0);
 var mouse_click = -1;
 var key_presses = [];
 
-window.onload = function() {
-    "use strict";
-    settingsWindow = document.getElementById('settingsWindow');
-
-    var display = new Display();
-    display.setFog(MAX_VIEW_DISTANCE);
-    display.setSea(1000);
-    display.setCameraPosition( MAPSIZE/2, MAPSIZE/2, MAX_VIEW_DISTANCE/2 );
-
-    display.setCameraDirection(0, -Math.PI / 2);
-
-    window.addEventListener('mousemove', onMouseMove, false);
-    window.addEventListener('mousedown', onMouseDown, false);
-    window.addEventListener('mouseup', onMouseUp, false);
-    window.addEventListener('keydown', onKeyPress, false);
-};
-
 function onMouseMove(event){
     "use strict";
     mouse_position.x = ( event.clientX / window.innerWidth ) * 2 - 1;
     mouse_position.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 }
-
 function onMouseDown(ev){
     "use strict";
     mouse_click = ev.button;
     console.log(mouse_click);
 }
 
-function onMouseUp(ev){
+function onMouseUp(){
     "use strict";
     mouse_click = -1;
 }
@@ -109,10 +94,10 @@ Display.prototype = {
 
         this.scene.add(seaMesh);
     },
-    setSky: function(colour){
+    /*setSky: function(colour){
         "use strict";
         // TODO
-    },
+    },*/
     updateLandscape: function(geometry, bottomLeft, topRight){
         "use strict";
         this.landscape_geometry.AddArea(bottomLeft, topRight, this.recursion_target);
@@ -203,4 +188,23 @@ Display.prototype = {
         settingsWindow.setAttribute('contents', ['tilt', Math.round(this.camera_tilt * 180 / Math.PI)]);
         settingsWindow.setAttribute('contents', ['recursion', this.recursion_target]);
     }
+};
+
+
+
+window.onload = function() {
+    "use strict";
+    settingsWindow = document.getElementById('settingsWindow');
+
+    var display = new Display();
+    display.setFog(MAX_VIEW_DISTANCE);
+    display.setSea(1000);
+    display.setCameraPosition( MAPSIZE/2, MAPSIZE/2, MAX_VIEW_DISTANCE/2 );
+
+    display.setCameraDirection(0, -Math.PI / 2);
+
+    window.addEventListener('mousemove', onMouseMove, false);
+    window.addEventListener('mousedown', onMouseDown, false);
+    window.addEventListener('mouseup', onMouseUp, false);
+    window.addEventListener('keydown', onKeyPress, false);
 };

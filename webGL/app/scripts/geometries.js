@@ -1,9 +1,16 @@
-var TERRAIN_UNDEFINED = 0;
-var TERRAIN_SEA = 1;
-var TERRAIN_SHALLOWS = 2;
+/* global Module */
+
+
+// TODO Move these defines into their own source file.
+var MAPSIZE = 3600000;
+
+//var TERRAIN_UNDEFINED = 0;
+//var TERRAIN_SEA = 1;
+//var TERRAIN_SHALLOWS = 2;
 var TERRAIN_SHORE = 3;
-var TERRAIN_LAND = 4;
-var TERRAIN_ROOT = 99;
+//var TERRAIN_LAND = 4;
+//var TERRAIN_ROOT = 99;
+
 
 function LandscapeDataGenerator(){
   "use strict";

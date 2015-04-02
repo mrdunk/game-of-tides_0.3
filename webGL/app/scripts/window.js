@@ -1,4 +1,5 @@
-//(function(xtag) {
+/* global xtag */
+
 document.addEventListener('WebComponentsReady',function(){
   'use strict';
   var childItterator, sectionContent;
@@ -11,7 +12,6 @@ document.addEventListener('WebComponentsReady',function(){
         // fired once at the time a component
         // is initially created or parsed
         xtag.innerHTML(this, '<x-window-header title="' + this.title + '"></x-window-header><x-window-content></<x-window-content>');
-//        this.container = {};
         for(childItterator in this.children){
             if(this.children[childItterator].tagName === 'X-WINDOW-CONTENT'){
                 sectionContent = this.children[childItterator];

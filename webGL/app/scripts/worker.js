@@ -1,4 +1,7 @@
-var MAPSIZE = 3600000;  // TODO move this define to seperate file that can be included everywhere.
+/* global self */
+/* global TestDataGenerator */
+/* global LandscapeDataGenerator */
+/* global importScripts */
 
 var data_generator;
 var counter = 0;
@@ -7,6 +10,7 @@ importScripts('geometries.js');
 importScripts('emscripten/world.js');
 
 self.addEventListener('message', function(e) {
+  'use strict';
   self.postMessage(e.data);
 
   if(e.data.generator_type === 'TestDataGenerator'){
@@ -35,7 +39,7 @@ self.addEventListener('message', function(e) {
     var index;
     for(var point_index in shape){
         index = current_index;
-        if(centre_index != index){
+        if(centre_index !== index){
             if(!first_index){
                 first_index = index;
             }
@@ -59,7 +63,7 @@ self.addEventListener('message', function(e) {
   var vertices = new Float32Array(vertices_temp);
   var indexes = new Uint32Array(indexes_temp);
 
-  var timer = Date.now() - timer;
+  timer = Date.now() - timer;
 
   self.postMessage({counter: counter++, time_spent: timer, index: current_index, vertices: vertices, indexes: indexes}, [vertices.buffer, indexes.buffer]);
 }, false);

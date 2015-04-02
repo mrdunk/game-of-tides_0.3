@@ -1,8 +1,9 @@
-QUnit.test( "hello test", function( assert ) {
-      assert.ok( 1 == "1", "Passed!" );
-});
+/* global QUnit */
+/* global TestDataGenerator */
+/* global LandscapeDataGenerator */
 
 QUnit.test( "TestDataGenerator_next", function( assert ) {
+    'use strict';
     var data_generator = new TestDataGenerator(100,100,10);
     assert.ok( data_generator, "data_generator ok." );
 
@@ -19,6 +20,7 @@ QUnit.test( "TestDataGenerator_next", function( assert ) {
 });
 
 QUnit.test( "TestDataGenerator_reset", function( assert ) {
+    'use strict';
     var data_generator = new TestDataGenerator(100,100,2);
     assert.ok( data_generator, "data_generator ok." );
     for(var count = 0; count < 4; count++){     // 4 = (point_density * point_density) where point_density is 2.
@@ -32,8 +34,8 @@ QUnit.test( "TestDataGenerator_reset", function( assert ) {
     assert.ok(data_generator.next(), 'data returned');
 });
 
-var MAPSIZE = 3600000;  // TODO break defines out into their own source file.
 QUnit.test( "LandscapeDataGenerator_next", function( assert ) {
+    'use strict';
     var data_generator = new LandscapeDataGenerator(1);
     assert.ok( data_generator, "data_generator ok." );
 
@@ -49,6 +51,7 @@ QUnit.test( "LandscapeDataGenerator_next", function( assert ) {
 });
 
 QUnit.test( "LandscapeDataGenerator_reset", function( assert ) {
+    'use strict';
     var data_generator = new LandscapeDataGenerator(1);
     assert.ok( data_generator, "data_generator ok." );
 
