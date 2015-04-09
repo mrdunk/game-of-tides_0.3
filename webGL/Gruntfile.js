@@ -20,9 +20,15 @@ module.exports = function(grunt) {
         }
       }
     },
+    jscs: {
+      src: "app/scripts/*.js",
+      options: {
+        config: ".jscsrc",
+      }
+    },
     watch: {
       files: ['<%= jshint.files %>'],
-      tasks: ['jshint']
+      tasks: ['jshint', 'jscs']
     },
     connect: {
       server: {
@@ -35,6 +41,7 @@ module.exports = function(grunt) {
   });
 
   grunt.loadNpmTasks('grunt-contrib-jshint');
+  grunt.loadNpmTasks("grunt-jscs");
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-connect');
 

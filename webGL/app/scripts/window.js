@@ -8,7 +8,7 @@ document.addEventListener('WebComponentsReady',function(){
     // extend existing elements
     lifecycle:{
       created: function(){
-        console.log(" *** x-window.lifecycle.created *** ");
+        console.log(' *** x-window.lifecycle.created *** ');
         // fired once at the time a component
         // is initially created or parsed
         xtag.innerHTML(this, '<x-window-header title="' + this.title + '"></x-window-header><x-window-content></<x-window-content>');
@@ -19,7 +19,7 @@ document.addEventListener('WebComponentsReady',function(){
           }
       },
       inserted: function(){
-        console.log(" *** x-window.lifecycle.inserted *** ");
+        console.log(' *** x-window.lifecycle.inserted *** ');
         // fired each time a component
         // is inserted into the DOM
       },
@@ -33,7 +33,7 @@ document.addEventListener('WebComponentsReady',function(){
     },
     accessors: {
       contents: {
-        attribute: { 
+        attribute: {
           var: [1,2]
         },
         get: function(){

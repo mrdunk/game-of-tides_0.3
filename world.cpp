@@ -716,9 +716,10 @@ Node* WorldItterator::get(){
         working_node = open.back();
         open.pop_back();
         closed.insert(working_node);
-        if(working_node->recursion == target_recursion && working_node->_corners.size() >= 3){
+        if(working_node->recursion == target_recursion){
             return working_node;
         }
+
         for(auto child = working_node->_children.begin(); child != working_node->_children.end(); ++child){
             if(closed.find(child->get()) == closed.end()){
                 open.push_back(child->get());

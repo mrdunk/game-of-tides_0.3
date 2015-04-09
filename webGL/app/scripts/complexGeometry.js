@@ -2,14 +2,13 @@
 
 
 function ComplexGeometry(scene, data_generator){
-    "use strict";
+    'use strict';
     this.scene = scene;
     this.worker = new Worker('scripts/worker.js');
     this.data_generator = data_generator;
     this.geometry = new THREE.BufferGeometry();
 
     this.material = new THREE.MeshPhongMaterial( {color: 0x00ff00} );
-    //this.material = new THREE.MeshBasicMaterial( {color: 0x00ff00} );
     this.mesh = new THREE.Mesh();
     this.mesh.name = 'landscape';
     this.mesh.material = this.material;
@@ -38,15 +37,17 @@ function ComplexGeometry(scene, data_generator){
         }
     }.bind(this), false);
     this.worker.onerror = function(e) {
-      console.log("Error in file: "+e.filename+"\nline: "+e.lineno+"\nDescription: "+e.message);
+      console.log('Error in file: ' + e.filename + '\nline: ' + e.lineno + '\nDescription: ' + e.message);
     };
 }
 
 ComplexGeometry.prototype = {
     constructor: ComplexGeometry,
     AddArea: function(top_left, bottom_right, recursion){
-        "use strict";
+        'use strict';
         this.data_generator.max_recursion = recursion;
+        this.data_generator.top_left = top_left;
+        this.data_generator.bottom_right = bottom_right;
         this.worker.postMessage(this.data_generator);
     },
     /*RemoveArea: function(top_left, bottom_right){
